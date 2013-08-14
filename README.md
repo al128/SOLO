@@ -1,14 +1,15 @@
 	SOLO JS
-	SOLO.JS : JS/HTML5/Canvas Utility helper file
+	SOLO.JS : JS/HTML5/Canvas Utility drop-in file
 	Created by Alastair Pearce
 	http://alpearce.me
 		
 	What is SOLO?
 	-------------
-	SOLO is a jquery extension, container helper functions for general javascript,
+	SOLO is a jquery and Canvas utility drop-in file, designed to speed up web development
+	and simple canvas application productin. It contains functions for general javascript,
 	html5 and most importantly canvas. It contains all sorts of useful functionality
-	plucked from around the web, making it a great starting point for competent JS
-	developers.
+	plucked from around the web such as moment.js and chart.js, making it a great starting point for 
+	competent JS developers.
 	
 	What was SOLO?
 	--------------
