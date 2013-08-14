@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>	
+	<meta charset="utf-8">	
+	<meta http-equiv="X-UA-Compatible" content="IE=EDGE">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">		
+	<title>Image manipulation demo</title>		
+	<link rel="stylesheet" href="http://belowthestorm.co.uk/website/css/index.css" type="text/css" />
+	<style>
+		body{padding-top:10px !important;}
+		.btn{margin-bottom:10px}
+	</style>
+</head>
+<body>	
+	<div class="container calign">
+		<p>
+			<button class="btn noselect" id="save">Save</button>		
+			<button class="btn noselect" id="reset">Reset</button>		
+			<button class="btn noselect" id="invert">Invert colours</button>
+			<button class="btn noselect" id="auto">Auto level</button>
+			<button class="btn noselect" id="incsat">Increase saturation</button>
+			<button class="btn noselect" id="decsat">Decrease saturation</button>
+			<button class="btn noselect" id="incbright">Increase brightness</button>
+			<button class="btn noselect" id="decbright">Decrease brightness</button>
+			<button class="btn noselect" id="inccont">Increase contrast</button>
+			<button class="btn noselect" id="deccont">Decrease contrast</button>
+		</p>
+		<p>
+			<canvas id="one">Please upgrade your browser to view this content</canvas>
+		</p>	
+	</div>	
+	<script type="text/javascript" src="solo.js"></script>				
+	<script>
+		/* Setup */
+		var one, context, blurimg;		
+		function init() {
+			//Setup canvas
+			one = _$.getCanvas("one");
+			context = _$.getContext("one");
+			context.imageSmoothingEnabled = true;			
+			loadImage();
+			
+			//Button handlers
+			_$.mobileClick("reset", function(){reset();});
+			_$.mobileClick("invert", function(){invert();});
+			_$.mobileClick("auto", function(){auto();});
+			_$.mobileClick("incsat", function(){incsat();});
+			_$.mobileClick("decsat", function(){decsat();});
+			_$.mobileClick("inccont", function(){inccont();});
+			_$.mobileClick("deccont", function(){deccont();});
+			_$.mobileClick("incbright", function(){incbright();});
+			_$.mobileClick("decbright", function(){decbright();});
+			_$.mobileClick("save", function(){save();});
+		}
+		function loadImage() {
+			//Load image, start wave on load
+			blurimg = _$.createImage("solo.jpg", function(img){
+				var width = img.width;
+				if (width > _$.getEl(window).width()) width = _$.getEl(window).width() - 30;
+				var height = img.height;
+				if (width != img.width) {
+					height = img.height * (width / img.width);
+				}
+				img.width = width;
+				img.height = height;
+				one.width = width;
+				one.height = height;
+				context.drawImage(blurimg, 0, 0, width, height);
+				blurimg = _$.getCanvasImage("one");
+			});
+		}
+		_$.onReady(function() {
+			init();
+		});
+		_$.onResize(function() {
+			loadImage();
+		});
+		
+		/* Functions */
+		function reset(){
+			_$.resetCanvas("one");
+			context.putImageData(blurimg, 0, 0);	
+		}
+		function invert(){
+			//reset();
+			_$.invertPixels("one", _$.getCanvasImage("one"), 0, 0);		
+		}
+		function auto(){
+			//reset();
+			_$.autoLevel(_$.getCanvasImage("one"), "one", 0, 0);
+		}
+		function incsat() {		
+			_$.saturation(0.1, _$.getCanvasImage("one"), "one", 0, 0);
+		}
+		function decsat() {
+			_$.saturation(-0.1, _$.getCanvasImage("one"), "one", 0, 0);
+		}
+		function inccont() {		
+			_$.contrast(5, _$.getCanvasImage("one"), "one", 0, 0);
+		}
+		function deccont() {
+			_$.contrast(-5, _$.getCanvasImage("one"), "one", 0, 0);
+		}
+		function incbright() {				
+			_$.brightness(5, _$.getCanvasImage("one"), "one", 0, 0);
+		}
+		function decbright() {
+			_$.brightness(-5, _$.getCanvasImage("one"), "one", 0, 0);
+		}
+		function save() {
+			_$.openTab(one.toDataURL("image/png"));
+		}
+	</script>
+</body>
+</html>
