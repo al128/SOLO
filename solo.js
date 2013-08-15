@@ -60,7 +60,7 @@ if (typeof($) == "undefined" && typeof(jQuery) == "undefined") {
 			log: function(message) {
 				if (this.settings.debug) {
 					if (message !== this.settings.debug.last) {
-						console.log(new moment());
+						console.log(new Date());
 						console.log(message);
 					}
 				}
@@ -86,6 +86,7 @@ _$.getEl = function(id, jq) {
 	if (el.length === 0) el = jQuery(this.getClass(id));		
 	return el;			
 };
+_$.getVal = function(id) { this.getEl(id).val(); };
 //
 _$.getEls = function(id, callback) { this.getEl(id).each(function(){ callback(this); }); };
 //
@@ -150,9 +151,9 @@ _$.onReady = function(callback){ this.getEl(document).ready(function(){callback(
 //
 _$.onResize = function(callback){ this.getEl(window).resize(function(){callback();}); };
 //
-_$.fireEvent = function(name) { this.getEl("body").trigger(name); }	
-//
-_$.runEachTick = function(callback) { this.getEl("body").bind("tick", callback); };
+_$.fireEvent = function(name) { this.getEl(document).trigger(name); }	
+_$.subscribeEvent = function(name, callback) { this.getEl(document).bind(name, callback); }
+_$.runEachTick = function(callback) { this.getEl(document).bind("tick", callback); };
 //
 _$.arrayShuffle = function(arr) {
 	var i = arr.length, j, tempi, tempj;
@@ -994,119 +995,4 @@ _$.fb_request_name = function(fbid, callback) {
 	this.getJSON("http://graph.facebook.com/" + fbid, function(data) {
 		callback(data.name, data.id);
 	});
-};
-
-/*
-	Twitter
-*/
-
-_$.twitter = {};
-_$.twitter.init = function(twitter_user, callback, refresh) {	
-	/*Update to api 1.1 + codebird*/
-	this.lastuser = twitter_user;
-	if (this.users == null) {this.users = {};}
-	if (this.users[twitter_user] != null && !refresh) {
-		callback(this.users[twitter_user].data);
-		return false;
-	} else {		
-		console.log("Loading twitter...");
-		this.users[twitter_user] = {};		
-		_$.getJSON("http://api.twitter.com/1/statuses/user_timeline.json?screen_name=" + twitter_user + "&callback=?", function(data) {					
-			_$.twitter.users[_$.twitter.lastuser].data = data;
-			callback(data);
-		});
-	}
-};
-
-_$.twitter.wallpost = function(url, text, popup, w, h) {
-	var url = "http://twitter.com/share?url=" + encodeURI(url) + "&text=" + encodeURI(text);
-	url = url.replace("#", "%23");
-	if (!popup) {
-		window.open(url, "_blank");
-		return false;
-	} else {
-		if (!w) {w = 500;}
-		if (!h) {h = 380;}
-		window.open(url, "_blank", "width=" + w + ",height=" + h);
-		return false;
-	}
-};
-
-_$.twitter.hashget = function(hash, count, callback, refresh) {	
-	this.lasthash = hash;
-	if (this.hashes == null) {this.hashes = {};}
-	if (this.hashes[hash] != null && !refresh) {
-		_$.getJSON("/twitter.php?q=" + hash + "&count=" + count + "&api=search_tweets", function(data) {
-			var newtweets = [];
-			for (var j = 0; j < data.statuses.length; j++) {					
-				var doit = true;				
-				for (var i = 0; i < _$.twitter.hashes[_$.twitter.lasthash].data.statuses.length; i++) {
-					if (_$.twitter.hashes[_$.twitter.lasthash].data.statuses[i].id == data.statuses[j].id) {
-						doit = false;
-					}
-				}
-				if (doit) {					
-					newtweets.push(data.statuses[j]);
-				}
-			}
-			for (var i = 0; i < newtweets.length; i++) {
-				_$.twitter.hashes[_$.twitter.lasthash].data.statuses.push(newtweets[i]);
-			}
-			callback(_$.twitter.hashes[_$.twitter.lasthash].data);
-		});
-	} else {
-		this.hashes[hash] = {};
-		_$.getJSON("/twitter.php?q=" + hash + "&count=" + count + "&api=search_tweets", function(data) {
-			_$.twitter.hashes[_$.twitter.lasthash].data = data;
-			callback(data);
-		});
-	}
-};
-
-_$.twitter.hashfeed = function(hash, count, callback, freq) {
-	//Create a feed	
-	if (this.feeds == null) {this.feeds = {};}	
-	this.feeds[hash] = {};
-	this.feeds[hash].hash = hash;
-	this.feeds[hash].count = count;
-	this.feeds[hash].callback = callback;
-	this.feeds[hash].next = freq;
-	this.feeds[hash].freq = freq;
-	
-	//Hook it up to hashget
-	this.feeds[hash].getdata = function() {
-		if (_$.twitter.hashes[this.hash] != undefined) {
-			return _$.twitter.hashes[this.hash].data;
-		} else {
-			return false;
-		}
-	};
-	this.feeds[hash].hashget = function() {		
-		_$.twitter.hashget(this.hash, this.count, function(){}, false)
-	};
-	this.feeds[hash].hashget();
-	
-	//Hook it up to a self sustaining loop
-	if (_$.gametick.active) {
-		var doit = true;
-		for (var i = 0; i < _$.gametick.updates.length; i++) {
-			if (_$.gametick.updates[i] == _$.twitter.runfeeds) {
-				doit = false;
-			}
-		}
-		if (doit) {
-			_$.gametick.append(_$.twitter.runfeeds);
-		}
-	} else {
-		_$.gametick.init([_$.twitter.runfeeds]);
-	}
-};
-
-_$.twitter.runfeeds = function() {
-	for (var feed in _$.twitter.feeds) {			
-		if (_$.gametick.time.friendly == _$.twitter.feeds[feed].next) {
-			_$.twitter.feeds[feed].next += _$.twitter.feeds[feed].freq;
-			_$.twitter.feeds[feed].hashget();
-		}
-	}
 };
