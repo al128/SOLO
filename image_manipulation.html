@@ -35,28 +35,28 @@
 		var one, context, blurimg;		
 		function init() {
 			//Setup canvas
-			one = _$.getCanvas("one");
-			context = _$.getContext("one");
+			one = $("#one").getCanvas();
+			context = $("#one").getContext();
 			context.imageSmoothingEnabled = true;			
 			loadImage();
 			
 			//Button handlers
-			_$.mobileClick("reset", function(){reset();});
-			_$.mobileClick("invert", function(){invert();});
-			_$.mobileClick("auto", function(){auto();});
-			_$.mobileClick("incsat", function(){incsat();});
-			_$.mobileClick("decsat", function(){decsat();});
-			_$.mobileClick("inccont", function(){inccont();});
-			_$.mobileClick("deccont", function(){deccont();});
-			_$.mobileClick("incbright", function(){incbright();});
-			_$.mobileClick("decbright", function(){decbright();});
-			_$.mobileClick("save", function(){save();});
+			$("#reset").mobileClick(function(){reset();});
+			$("#invert").mobileClick(function(){invert();});
+			$("#auto").mobileClick(function(){auto();});
+			$("#incsat").mobileClick(function(){incsat();});
+			$("#decsat").mobileClick(function(){decsat();});
+			$("#inccont").mobileClick(function(){inccont();});
+			$("#deccont").mobileClick(function(){deccont();});
+			$("#incbright").mobileClick(function(){incbright();});
+			$("#decbright").mobileClick(function(){decbright();});
+			$("#save").mobileClick(function(){save();});
 		}
 		function loadImage() {
 			//Load image, start wave on load
-			blurimg = _$.createImage("solo.jpg", function(img){
+			blurimg = "solo.jpg".createImage(function(img){
 				var width = img.width;
-				if (width > _$.getEl(window).width()) width = _$.getEl(window).width() - 30;
+				if (width > $(window).width()) width = $(window).width() - 30;
 				var height = img.height;
 				if (width != img.width) {
 					height = img.height * (width / img.width);
@@ -66,28 +66,26 @@
 				one.width = width;
 				one.height = height;
 				context.drawImage(blurimg, 0, 0, width, height);
-				blurimg = _$.getCanvasImage("one");
+				blurimg = $("#one").getCanvasImageData();
 			});
 		}
-		_$.onReady(function() {
+		$.onReady(function() {
 			init();
 		});
-		_$.onResize(function() {
+		$.onResize(function() {
 			loadImage();
 		});
 		
 		/* Functions */
 		function reset(){
-			_$.resetCanvas("one");
+			$("#one").clearCanvas();
 			context.putImageData(blurimg, 0, 0);	
 		}
-		function invert(){
-			//reset();
-			_$.invertPixels("one", _$.getCanvasImage("one"), 0, 0);		
+		function invert(){			
+			$("#one").invertPixels();			
 		}
 		function auto(){
-			//reset();
-			_$.autoLevel(_$.getCanvasImage("one"), "one", 0, 0);
+			$("#one").autoLevel();			
 		}
 		function incsat() {		
 			_$.saturation(0.1, _$.getCanvasImage("one"), "one", 0, 0);

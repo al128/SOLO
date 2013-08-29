@@ -1,5 +1,5 @@
 /*
-	_$ SOLO.JS Common web & canvas utilities v1 MIT License https://github.com/al128/SOLO http://alpearce.me http://belowthestorm.co.uk
+	_$ SOLO.JS Common web & canvas utilities v1 MIT License https://github.com/al128/SOLO http://alpearce.me http://belowthestorm.co.uk	
 */
 
 /*
@@ -42,939 +42,102 @@ if (typeof($) == "undefined" && typeof(jQuery) == "undefined") {
 }
 
 /*
-	Core
+	Extend strings to provide functionality related to paths & urls	
+*/
+
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+};
+String.prototype.createImage = function(callback) {
+	if (typeof(_$.cache[this]) !== "undefined") return _$.cache[this];
+	var img = document.createElement("img");
+	img.src = this;
+	if (callback) img.onload = function() { callback(this); };	
+	_$.cache[this] = img;
+	return img;
+};
+String.prototype.createSound = function() {
+	var audio = new Audio(this);
+	if (typeof(callback) === "function") audio.addEventListener('canplaythrough', callback, false);
+	return audio;
+};
+String.prototype.goTo = function(tab) {
+	if (tab === false) { window.location = url; } else { window.open(url,'_blank');	}
+};
+String.prototype.monitor = function() {
+	// Monitors look for key presses of selected character
+};
+String.prototype.queryString = function() {
+	key = this.replace(/[*+?^$.\[\]{}()|\\\/]/g, "\\$&"); var match = location.search.match(new RegExp("[?&]"+key+"=([^&]+)(&|$)"));	return match && decodeURIComponent(match[1].replace(/\+/g, " "));
+};
+String.prototype.splice = function( idx, rem, s ) {
+    return (this.slice(0,idx) + s + this.slice(idx + Math.abs(rem)));
+};
+
+/*
+	Extend jQuery
 */
 
 (function(jq) {		
-	jq._solo = function(options) { this._init(options); };	
-    jq.extend(jq._solo, {        		
-		prototype: {				
-			defaults: {
-				"debug":{"last":""},
-				"body":jq("body")
-			},
-			_init: function(options) {
-				this.settings = jq.extend(true, {}, this.defaults, options);				
-				if (this.settings.debug) this.log("SOLO loaded in debug mode.")
-			},
-			log: function(message) {
-				if (this.settings.debug) {
-					if (message !== this.settings.debug.last) {
-						console.log(new Date());
-						console.log(message);
-					}
-				}
-			},
-			changeSettings: function(options) {
-				jq.extend(true, {}, this.settings, options);
-			}
-		}
-	});
-}(jQuery));
-_$ = new jQuery._solo();
-
-//
-_$.getId = function(id) { if ((typeof(id) === "object" || id.indexOf(".") === 0 || id.indexOf("#") === 0)) return id; return "#" + id;	};
-//
-_$.getClass = function(id) { if ((id.indexOf(".") === 0 || id.indexOf("#") === 0)) return id; return "." + id; };
-//
-_$.getEl = function(id, jq) {	
-	//if (id !== "string") return id;
-	if (jq === false) return document.getElementById(id);	
-	var el = jQuery(this.getId(id));
-	if (el.length === 0) el = jQuery(id);		
-	if (el.length === 0) el = jQuery(this.getClass(id));		
-	return el;			
-};
-_$.getVal = function(id) { this.getEl(id).val(); };
-//
-_$.getEls = function(id, callback) { this.getEl(id).each(function(){ callback(this); }); };
-//
-_$.elOffset = function(id) { return this.getEl(id, false).getBoundingClientRect(); };
-//
-_$.getCursorPosition = function(e) {	
-	if (e.target.id === "") return [0,0];
-	if (this.getEl(e.target.id).length === 0) return [0,0];	
-	var rect = this.elOffset(e.target.id);
-	var x = (e.clientX - rect.left);
-	var y = (e.clientY - rect.top);
-	return [x,y];
-};
-//
-_$.getMousePosition = function(e) {	this.mx = this.getCursorPosition(e)[0];	this.my = this.getCursorPosition(e)[1]; return {"x":this.mx, "y":this.my}; };
-//
-_$.getFile = function(id, callback, type) {
-	if (type === null || type === "") type = "img";
-	var reader = new FileReader();
-    reader.onload = function(event) { _$.createImage(event.target.result, callback); };
-    reader.readAsDataURL(this.getEl(id, false).files[0]);   
-};
-//
-_$.createImage = function(source, callback) {
-	if (typeof(_$.imagecache) === "undefined") _$.imagecache = [];
-	if (typeof(_$.imagecache[source]) !== "undefined") return _$.imagecache[source];
-	var img = document.createElement("img");
-	img.src = source;
-	if (callback !== null) img.onload = function() { callback(this); };	
-	_$.imagecache[source] = img;
-	return img;
-};
-//
-_$.createImageArray = function(imgs, callback) {
-	if (typeof(imgs) === "object") {
-		for (var i = 0; i < imgs.length; i++) {
-			if (typeof(imgs[i]) === "string") 				
-				imgs[i] = _$.createImage(imgs[i], callback);
-		}		
-	}	
-	return imgs;
-};
-//
-_$.createSound = function(source, callback) {	
-	var audio = new Audio(source);
-	if (typeof(callback) === "function")	audio.addEventListener('canplaythrough', callback, false);
-	return audio;
-};
-//
-_$.random = function(num, min, seed) {
-	if (min === null) min = 0; 
-	if (typeof(_$.randoms) === "undefined") _$.randoms = [];
-	if (typeof(_$.randoms[num + "_" + min]) === "undefined") _$.randoms[num + "_" + min] = new MersenneTwister(seed);	
-	return Math.floor(_$.randoms[num + "_" + min].random()*(num-min)) + min;
-};
-//
-_$.goToURL = function(url) { window.location = url; };
-//
-_$.openTab = function(url) { window.open(url,'_blank'); };
-//
-_$.onReady = function(callback){ this.getEl(document).ready(function(){callback();}); };
-//
-_$.onResize = function(callback){ this.getEl(window).resize(function(){callback();}); };
-//
-_$.fireEvent = function(name) { this.getEl(document).trigger(name); }	
-_$.subscribeEvent = function(name, callback) { this.getEl(document).bind(name, callback); }
-_$.runEachTick = function(callback) { this.getEl(document).bind("tick", callback); };
-//
-_$.arrayShuffle = function(arr) {
-	var i = arr.length, j, tempi, tempj;
-	if (i === 0) return arr;
-	while (--i) {
-		j = Math.floor(Math.random() * ( i + 1 ));
-		tempi = arr[i];
-		tempj = arr[j];
-		arr[i] = tempj;
-		arr[j] = tempi;
-	}
-	return arr;
-};	
-//
-_$.vAlign = function(el, container, offset, margin) {
-	return this.getEl(el).each(				
-		function(i){
-			if (offset === null) {offset = 0;}
-			var ah = _$(this).height();
-			var ph = 0;
-			if (container === null){
-				ph = _$(this).offsetParent().height();
-			} else {
-				ph = _$(container).eq(0).height();
-			}					
-			var mh = Math.ceil((ph-ah) / 2);
-			if (margin === true) {
-				_$(this).css('margin-top', mh - offset);
-			} else {
-				_$(this).css('padding-top', mh - offset);
-			}
-		}
-	);
-};
-//
-_$.clearStyles = function(el) {	return this.getEl(el).removeAttr("style"); }
-//
-_$.createCallback = function(that, callback) { return function(){callback(that);}; };
-// Strip text
-_$.strip = function(name, s, r) { return name.replace(s, r); };
-// Use this instead of .click
-_$.mobileClick = function(el, callback) {
-	if (typeof(el) !== "object") el = this.getEl(el);
-	el.bind('tap click', function(e) {
-		e.preventDefault();			
-		callback(e, this);
-	});
-};
-// Create deep copy
-_$.duplicate = function(obj) {
-	return this.extend({}, obj, {});
-};
-// Calculate an angle
-_$.angle = function(endx, endy) {
-	var destx = endx; var desty = -endy;    
-	var deltaX = destx - 370; var deltaY = desty - (150 * -1);      
-	var angle = deltaY / deltaX;
-	return desty - (angle * destx);
-};
-
-// Return x,y points on a three point curve
-_$.getCurvePoints = function(x1, y1, x2, y2, x3, y3, dir) {	
-	a = ((y2-y1)*(x1-x3) + (y3-y1)*(x2-x1))/((x1-x3)*(x2*x2-x1*x1) + (x2-x1)*(x3*x3-x1*x1));
-	b = ((y2 - y1) - a*(x2*x2 - x1*x1)) / (x2-x1);
-	c = y1 - a*x1*x1 - b*x1;		
-	var points = [];
-	if (x3 > x1) {
-		for (var i = x1; i <= Math.abs(x3); i++) {
-			points.push({"x":i, "y": (a * (i * i) + (b * i) + c)});
-		}
-	} else {
-		for (var i = x1; i >= x3; i--) {
-			points.push({"x":i, "y": (a * (i * i) + (b * i) + c)});
-		}
-	}	
-	return points;
-};
-// Get a url query item
-_$.qs = function(key) {	key = key.replace(/[*+?^$.\[\]{}()|\\\/]/g, "\\$&"); var match = location.search.match(new RegExp("[?&]"+key+"=([^&]+)(&|$)"));	return match && decodeURIComponent(match[1].replace(/\+/g, " ")); };
-// Create simple timers (tick should only be used for a lot of repetitive functionality)
-_$.createTimer = function(callback,seconds) { return setTimeout(callback,(seconds*1000)); };
-_$.createLoop = function(callback,seconds) { return setInterval(callback,(seconds*1000)); };
-_$.stopTimer = function(timer) { clearTimeout(timer); };
-// Remove from array
-_$.removeFromArray = function(obj, index, amount) {
-	if (!amount) {amount = 1;}
-	obj.splice(index,amount);
-};
-// Cleanup an array of objects with .destroy active
-_$.cleanupArray = function(arr) {
-	var deleting = [];
-	for (var i = 0; i < arr.length; i++) {
-		if (arr[i].destroy === true) {
-			deleting.push(i - deleting.length);
-		}
-	}
-	for (var i = 0; i < deleting.length; i++) {
-		this.removeFromArray(arr, deleting[i]);
-	}
-};
-// Latest browser detection methods
-_$.doBrowserDetection = function() {
-	if (!_$.detection) {
-		_$.detection = {};
-		_$.detection.isOpera = !!window.opera || navigator.userAgent.indexOf('Opera') >= 0;
-		/*Opera 8.0+ (UA detection to detect Blink/v8-powered Opera)*/
-		_$.detection.isFirefox = typeof InstallTrigger !== 'undefined'; /* Firefox 1.0+*/
-		_$.detection.isSafari = Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0;
-		/*At least Safari 3+: "[object HTMLElementConstructor]"*/
-		_$.detection.isChrome = !!window.chrome; /* Chrome 1+*/
-		_$.detection.isIE = /*@cc_on!@*/false;  /* At least IE6*/
-	}
-};
-
-/*
-	Game & Canvas
-*/
-
-_$.setupAll = function(canvas_id, mouseonly) {
-	this.setupCanvas(canvas_id);
-	this.setupInputController(mouseonly);
-	this.setupTick();	
-};
-_$.setupCanvas = function(canvas_id) {		
-	this.log("Setting up Canvas...");		
-	this.setScreen(canvas_id);	
-	return true;	
-};
-_$.setScreen = function(screen) {
-	if (typeof(screen) === "string") {
-		this.screen = this.getCanvas(id);
-	} else {
-		this.screen = screen;
-	}	
-	this.setLayer(screen);	
-};
-_$.getScreen = function() {	return this.screen; };
-_$.setLayer = function(layer) {
-	if (typeof(layer) === "string") {
-		this.layer = this.getContext(layer);
-	} else {
-		this.layer = layer;
-	}
-};
-_$.getLayer = function() { return this.layer; };
-_$.getCanvas = function(id) {
-	if (typeof(id) === "object") return id;
-	var canvas = this.getEl("canvas#" + id, false);	
-	if (canvas === null) { canvas = this.getEl(id, false); }
-	if (canvas === null) { canvas = this.screen; }
-	if (canvas === null) { 
-		canvas = this.getEl("<canvas>").attr("width", "640").attr("height", "480");
-		this.log("Couldn't find a canvas, creating a new one.");
-	}
-	return canvas;
-};
-_$.getContext = function(id) {
-	if (typeof(id) === "object")
-		return id.getContext('2d');
-	if (typeof(id) === "undefined" || id === null || id === "")
-		return this.getGameLayer();
-	return this.getCanvas(id).getContext('2d');	
-};
-_$.resizeCanvas = function(id, w, h) {	if (w !== null) this.getCanvas(id).width = w; if (h !== null) this.getCanvas(id).height = h; };
-_$.clearScreen = function() { this.resetCanvas(); };
-_$.resetCanvas = function(id) {	this.getContext(id).clearRect ( 0 , 0 , this.getCanvas(id).width, this.getCanvas(id).height ); };
-_$.changeOpacity = function(canvas, opacity) { _$.getCanvas(canvas).globalAlpha = opacity; };
-_$.resetOpacity = function(canvas) { _$.getCanvas(canvas).globalAlpha = 1; };
-_$.drawRotatedImage = function(options) {			
-	var layer = this.getContext(options.canvas);
-	layer.save();		          
-	layer.translate(options.x, options.y);
-    layer.rotate(options.rotation * (Math.PI/180)); 
-	layer.drawImage(options.img, -(options.width/2), -(options.height/2), options.width, options.height);
-	layer.restore();	
-};
-_$.drawCanvasBox = function(id, x, y, width, height) {
-	_$.getContext(id).fillRect(x,y,width,height);
-};
-_$.drawCanvasCircle = function(id, x, y, radius, color, linewidth, linecolor) {
-	var context = _$.getContext(id);
-	/*Circle	
-	to do : convert x & y to center x & y*/
-	context.beginPath();
-    context.arc(x, y, radius, 0, 2 * Math.PI, false);
-    if (color === null) {color = "#000000";}		
-	context.fillStyle = color;
-    context.fill();	
-	/*Outerline*/
-	if (linewidth !== null || linecolor !== null) {
-		if (linewidth === null) {linewidth = 0;}		
-		if (linecolor === null) {linecolor = "#000000";}
-		context.lineWidth = linewidth;
-		context.strokeStyle = linecolor;
-		context.stroke();
-	}
-}
-_$.drawText = function(id, text, x, y, color, font, alignment, base) {
-	var layer = this.getContext(id);
-	if (base !== null && base !== "") {
-		layer.textBaseline = base;
-	}
-	if (alignment !== null && alignment !== "") {
-		layer.textAlign = alignment;
-	}	
-	layer.fillStyle = color;
-	if (font === null || font === "") {
-		font = "30px Arial";
-	}
-	layer.font = font;
-	layer.fillText(text, x, y);
-};
-_$.drawLine = function(id, x1, y1, x2, y2, strokewidth, color) {
-	var context = this.getContext(id);
-	context.beginPath();
-	context.moveTo(x1, y1);
-	context.lineTo(x2, y2);
-	if (strokewidth !== null && strokewidth !== "") {
-		context.lineWidth = strokewidth;
-	}
-	if (color !== null && color !== "") {
-		context.strokeStyle = color;
-	}
-	context.stroke();
-};
-// Canvas image handlers
-_$.getCanvasImage = function(id, x, y, width, height) {
-	if (width === null) {
-		width = this.getCanvasWidth(id);		
-	}
-	if (height === null) {
-		height = this.getCanvasHeight(id);		
-	}	
-	if(!x){x=0;} if(!y){y=0;}
-	return this.getContext(id).getImageData(x, y, width, height);	
-};
-_$.getImageURL = function(img) {
-	var canvas = document.createElement("canvas");
-	canvas.width = img.width;
-	canvas.height = img.height;    
-	var ctx = canvas.getContext("2d");
-	ctx.drawImage(img, 0, 0);    
-	return canvas.toDataURL("image/png");
-};
-_$.createImageFromCanvas = function(id, x, y, width, height, callback) {
-	var canvas = document.createElement("canvas");
-	canvas.width = width;
-	canvas.height = height; 
-	var ctx = canvas.getContext("2d");
-	ctx.putImageData(_$.getCanvasImage(id, x, y, width, height), 0, 0); 
-	return _$.createImage(canvas.toDataURL("image/png"), callback);
-};
-_$.createImgData = function(id, imgdata, width, height) {
-	if (width === null) {
-		width = this.getCanvasWidth(id);		
-	}
-	if (height === null) {
-		height = this.getCanvasHeight(id);		
-	}	
-	var data = this.getContext(id).createImageData(width, height);
-	data.data.set(imgdata);
-	return data;
-};
-
-/* 
-	Collision Detection 
-*/
-
-_$.boxCollider = function(box1, box2) {	
-	if (!box1 || !box2)
-		return false;
-	if (!((box1.x + box1.w) >= box2.x)) 
-		return false;     
-	if (!(box1.x <= (box2.x + box2.w)))	
-		return false;	
-	if (!((box1.y + box1.h) >= box2.y)) 
-		return false;
-	if (!(box1.y <= (box2.y + box2.h))) 
-		return false;		
-	return true;			
-};
-
-_$.generateBoxCollider = function(img) {
-	var testdata, testdata2;
-	var canvas = document.createElement("canvas");
-	canvas.width = img.width;
-	canvas.height = img.height;    
-	var ctx = canvas.getContext("2d");
-	ctx.drawImage(img, 0, 0);    
-	var imgdata = ctx.getImageData(0,0,img.width,img.height);
-	var p = imgdata.data;		
-	
-	var rh = 10;
-	var rows = [];
-	var row_size = Math.floor(img.height / rh);
-	if (img.height % rh > 0) {
-		row_size++;
-	}	
-	
-	var cw = rh;
-	var columns = [];		
-	var column_size = Math.floor(img.width / cw);
-	if (img.width % cw > 0) {
-		column_size++;
-	}			
-	
-	var curr_column = 1;
-	var curr_row = 1;
-	for (var i = 0; i < (p.length * 4); i += 4) {
-		if (i > (curr_column * cw) * 4) {
-			curr_column++;
-		}	
-		if (i > (imgdata.width * curr_row) * 4) {
-			curr_row++;
-			curr_column = 0;
-		}
-		if (p[i+3] > 100) {			
-			if(typeof(columns[curr_column - 1]) === "undefined"){ columns[curr_column - 1] = 0; }
-			columns[curr_column - 1] += p[i+3];
-			if(typeof(rows[curr_row - 1]) === "undefined"){ columns[curr_row - 1] = 0; }
-			rows[curr_row - 1] += p[i+3];
-		}		
-	}	
-	
-	testdata = columns;
-	testdata2 = rows;
-};
-
-/* 
-	Tick
-*/
-
-_$.update = function(){};
-_$.refreshGametick = function() { _$.tick.refresh([_$.update]); };
-_$.setupGameTick = function() {	_$.tick.init([_$.update]); };
-_$.getTimeSinceStarted = function(simple){
-	if (simple) return _$.tick.time.friendly;
-	return _$.tick.time.actual;
-};
-_$.tick = {	
-	active: false,
-	time: {"actual":0.00, "friendly":0},
-	init : function(updates) {
-		_$.tick.active = true;
-		if (typeof(updates) === "object") {
-			_$.tick.refresh(updates);
-		} else {
-			_$.tick.clear();
-		}				
-		_$.tick.update();
-	},
-	update : function(time) {		
-		if (time === null) time = 1;
-		_$.tick.time.actual = time;		
-		_$.tick.time.friendly = Math.floor(time / 1000);
-		for (var i = 0; i < _$.tick.updates.length; i++) {			
-			try{
-				_$.fireEvent("tick");
-				_$.tick.updates[i]();
-			} catch(e) {
-				_$.log("An error occured in the game loop...!");
-				_$.log(e); _$.log(e.message);
-			}
-		}
-		if (_$.io.active) _$.io.update();		
-		window.requestAnimationFrame(function(time){_$.tick.update(time);});		
-	},
-	append : function(update) {
-		if (!update) return;
-		if (!_$.tick.updates) _$.tick.updates = [];		
-		_$.tick.updates.push(update);		
-	},
-	refresh : function(updates) { if (updates !== null) _$.tick.updates = updates; },
-	clear: function() { _$.tick.updates = []; }
-};
-
-/*
-	Input controller		
-*/
-
-_$.setupInputController = function(mouse) {_$.io.init(mouse);}
-_$.io = {
 	/*
-		Game controller states: 0 - Netural | 1 - onKeyDown | -1 - onKeyUp
+		Create Facebook extension
 	*/
-	init : function(mouseonly) {
-		//_$.io.gamepad = gamepadSupportAvailable;
-		_$.io.mouse = {};
-		_$.io.keys = {};		
-		_$.io.update();		
-		_$(document).mousemove(function(e) { _$.getMousePosition(e);	});
-		_$(document).mousedown(function(e) {			
-			if (e.target.id.indexOf("canvas_") > -1) {
-				_$.getMousePosition(e);
-				e.preventDefault();				
-			}			
-			switch(e.button) {
-				case 0:
-					_$.io.mouse.left = 1;
-					break;
-				case 1:
-					_$.io.mouse.middle = 1;
-					break;
-				case 2:
-					_$.io.mouse.right = 1;
-					break;
-			}			
-		});
-		_$(document).mouseup(function(e) {			
-			if (e.target.id.indexOf("canvas_") > -1) {
-				_$.getMousePosition(e);
-				e.preventDefault();								
-			}
-			switch(e.button) {
-				case 0:
-					_$.io.mouse.left = -1;
-					break;
-				case 1:
-					_$.io.mouse.middle= -1;
-					break;
-				case 2:
-					_$.io.mouse.right = -1;
-					break;
-			}			
-		});		
-		if (!mouseonly) _$(document).keydown(function(e) { _$.io.getKey(e, true); }).keyup(function(e) { _$.io.getKey(e, false); });		
-		this.active = true;
-	},
-	getKey : function(e, down) {
-			if (!e) return;
-			var val = 1; if (!down) val = -1;
-			var key = String.fromCharCode(e.keyCode).toUpperCase().trim();						
-			if (this.active)
-				switch (key) {
-					case "W": _$.io.keys.up = val;	break;
-					case "D": _$.io.keys.right = val; break;
-					case "A": _$.io.keys.left = val; break;
-					case "S": _$.io.keys.down = val; break;
-					case "E": _$.io.keys.action1 = val; break;
-					case "Q": _$.io.keys.action2 = val; break;
-					case "1": break;
-					case "2": break;
-					case "3": break;
-					default:						
-						if (e.keyCode === 37) { _$.io.keys.left = val; e.preventDefault();}
-						if (e.keyCode === 39) { _$.io.keys.right = val; e.preventDefault();}
-						if (e.keyCode === 38) { _$.io.keys.up = val; e.preventDefault();}
-						if (e.keyCode === 32) { _$.io.keys.space = val; e.preventDefault();}	
-						if (e.keyCode === 17) { _$.io.keys.action1 = val; }
-						if (e.keyCode === 18) { _$.io.keys.action2 = val; }
-						break;
-				}
-			return key;
-	},
-	update : function() {
-		_$.io.keys.left = 0;
-		_$.io.keys.right = 0;
-		_$.io.keys.down = 0;
-		_$.io.keys.up = 0;
-		_$.io.keys.space = 0;
-		_$.io.keys.action1 = 0;
-		_$.io.keys.action2 = 0;
-		
-		if (_$.io.mouse.left === -1) 
-			_$.io.mouse.left = 0;		
-		if (_$.io.mouse.middle === -1) 
-			_$.io.mouse.middle = 0;		
-		if (_$.io.mouse.right === -1)
-			_$.io.mouse.right = 0;		
-	},
-	active : false
-};
-
-/*
-	Preloader
-*/
-
-_$.createPreloader = function(images, callback, html, timeout) {	
-	var preloader = {};
-	preloader.preloaded = 0;
-	preloader.cache = [];
 	
-	if (typeof(callback) === "function") {preloader.callback = callback;}
-	if (timeout === null) {timeout = 0;}
-	
-	preloader.loaded = function() {		
-		this.preloaded--;
-		if (this.preloaded <= 0) {			
-			this.callback();
-		}
-	};
-	preloader.remove = function() {
-		_$.getEl("preloader").remove();
-	};			
-	
-	if (html === null) {
-		preloader.html = this.getEl("<div>").addClass("preloader").attr("id","preloader");
-		preloader.html.append(this.getEl("<img>").attr("src", "img/website/spinner.gif"));
-	}	
-	preloader.html = html;
-	this.getEl("body").append(preloader.html);
-		
-	if (images && images.length > 0) {		
-		preloader.preloaded = images.length;		
-		for (var i = 0; i < images.length; i++) {
-			preloader.cache.push(this.createImage(images[i], function(){
-				preloader.loaded();
-			}));
-		}		
-	} else {		
-		setTimeout(preloader.loaded, timeout);
-	}
-	return preloader;
-};
-
-/*
-	Sprite animation
-	Return an animation object which is built from a strip of images
-	(currently horizonal).
-*/
-
-_$.createSpriteAnimation = function(animation) {
-	//Animation should have: {img, slide_num, slide_width, slide_height, interval, repeat}	
-	animation.active = false;
-	animation.play = function() {
-		if (!this.active) {
-			this.active = true;	
-			this.num = 0;
-			this.next();
-		} else {
-			this.update();
-		}
-	};
-	animation.update = function() {
-		if (!this.active) return;
-		if((_$.getTimeSinceStarted(false) / 10) - this.start > this.interval) {
-			this.next();
-		}
-	};
-	animation.next = function() {
-		this.start = _$.getTimeSinceStarted(false) / 10;
-		this.num++;
-		if (this.num >= this.slide_num && this.repeat) this.num = 0;
-		this.current = {"x":this.num * this.slide_width,"y":0};		
-	};
-	animation.pause = function() {
-	
-	};
-	animation.resume = function() {
-	
-	};
-	return animation;
-};
-
-/*
-	Cutscenes
-	A cutscene is a series of transitions played after one after another
-	When one finishes it will run the previous' callback which can be a number,
-	id, or function. Numbers/id refer to a position in the transitions array, 
-	or a transition id respectively. A function is custom functionality,
-	generally used for your last transition
-*/
-	
-_$.transitions = [];
-_$.createCutscene = function(id, transitions) {
-	if (typeof(transitions) === "object") {
-		_$.transitions[id] = transitions;	
-	} else {
-		_$.log("Not a valid set of transitions");
-		return;
-	}
-};
-_$.playCutscene = function(id) {
-	_$.playTransition(id, 0);
-}
-_$.playTransition = function(id, transition) {
-	if (id === null || id === "") {
-		_$.log("Invalid cutscene id.");
-		return;
-	}
-	var t = transition;
-	if (typeof(t) === "string") {
-		for (var i = 0; i < _$.transitions[id].length; i++) {
-			if (_$.transitions[id][i].id === t) {
-				t = _$.transitions[id][i];
-				i = _$.transitions[id].length;
-			}
-		}
-	} else if (typeof(t) === "number") {
-		t = _$.transitions[id][t];
-	}
-	if (typeof(t) !== "object") {
-		_$.log("Transition not found.");
-		return;
-	}
-	t.time = 0;
-	this._handleTransition(t, id);
-};
-_$._handleTransition = function(t, id) {
-	t.code();
-	t.time += t.speed;
-	if (t.time > t.duration) {
-		if (typeof(t.callback) === "function") {
-			t.callback();
-		} else {
-			_$.playTransition(id, t.callback);
-		}
-	} else {					
-		setTimeout(function() {_$._handleTransition(t, id);}, t.speed);
-	}	
-};
-
-/*
-	Image manipulation
-*/
-_$.invertPixels = function(id, imageData, x, y) {	
-	var p = imageData.data;		
-	for (var i = 0, n = p.length; i < n; i += 4) {		
-		p[i] = 255 - p[i];
-		p[i +1] = 255 - p[i+1];
-		p[i+2] = 255 - p[i+2];		
-	}
-	imageData.data = p;
-	_$.getContext(id).putImageData(imageData, x, y);
-};
-_$.autoLevel = function(imgData, canvas, x, y) {	
-	var histogram = {};
-	for (var i = 0; i < 256; i++) {
-		histogram[i] = 0;
-	}
-	for (var i = 0; i < imgData.data.length; i += 4) {
-		var r = imgData.data[i];
-		var g = imgData.data[i + 1];
-		var b = imgData.data[i + 2];
-
-		var brightest = (r * 0.299) + (g * 0.587) + (b * 0.114);
-		brightest = Math.round(brightest);
-		if (brightest > 255) { brightest = 255; }
-		histogram[brightest]++;
-	}
-	var white = 255;
-	var counter = 0;
-	while ((counter < 200) && (white > 0)) {
-		counter += histogram[white];
-		white--;
-	}
-	var brightest = 1 + ((255 - white) / 256.0);
-	for (var i = 0; i < imgData.data.length; i += 4) {
-		var r = imgData.data[i];
-		var g = imgData.data[i + 1];
-		var b = imgData.data[i + 2];
-		var alpha = -0.2;
-		r = ((1 - alpha) * r) + (alpha * brightest);
-		g = ((1 - alpha) * g) + (alpha * brightest);
-		b = ((1 - alpha) * b) + (alpha * brightest);
-		imgData.data[i] = r;
-		imgData.data[i + 1] = g;
-		imgData.data[i + 2] = b;
-	}
-	_$.getContext(canvas).putImageData(imgData, x, y);
-};
-_$.brightness = function(val, imgData, canvas, x, y) {
-	if (x == null){x=0;}
-	if (y == null){y=0;}
-	for (var i = 0; i < imgData.data.length; i += 4) {
-		imgData.data[i] += val;
-		imgData.data[i + 1] += val;
-		imgData.data[i + 2] += val;
-	}
-	_$.getContext(canvas).putImageData(imgData, x, y);
-};
-_$.contrast = function(val, imgData, canvas, x, y) {
-	var v = val;
-	v = (100 + v) / 100;
-	v *= v;
-	
-	for (var i = 0; i < imgData.data.length; i += 4) {
-		var r = imgData.data[i];
-		var g = imgData.data[i + 1];
-		var b = imgData.data[i + 2];
-
-		r /= 255;
-		g /= 255;
-		b /= 255;
-
-		r = (((r - 0.5) * v) + 0.5) * 255;
-		g = (((g - 0.5) * v) + 0.5) * 255;
-		b = (((b - 0.5) * v) + 0.5) * 255;
-
-		if (r > 255) {
-			r = 255;
-		} else if (r < 0) {
-			r = 0;
-		}
-
-		if (g > 255) {
-			g = 255;
-		} else if (g < 0) {
-			g = 0;
-		}
-
-		if (b > 255) {
-			b = 255;
-		} else if (b < 0) {
-			b = 0;
-		}
-
-		imgData.data[i] = r;
-		imgData.data[i + 1] = g;
-		imgData.data[i + 2] = b;
-	}
-	_$.getContext(canvas).putImageData(imgData, x, y);
-};
-_$.saturation = function(val, imgData, canvas, x, y) {
-	for (var i = 0; i < imgData.data.length; i += 4) {
-		var r = imgData.data[i];
-		var g = imgData.data[i + 1];
-		var b = imgData.data[i + 2];
-
-		var luminace = (r * 0.299) + (g * 0.587) + (b * 0.114);
-		var alpha = -val;
-
-		r = ((1 - alpha) * r) + (alpha * luminace);
-		g = ((1 - alpha) * g) + (alpha * luminace);
-		b = ((1 - alpha) * b) + (alpha * luminace);
-
-		imgData.data[i] = r;
-		imgData.data[i + 1] = g;
-		imgData.data[i + 2] = b;
-	}
-	_$.getContext(canvas).putImageData(imgData, x, y);
-};
-
-/*
-	SOLO - SOCIAL
-	These functions allow you to setup various social functionality
-	For twitter to work, you must use some kind of oauth service
-	I fully recommend codebird
-*/
-
-/*
-	Facebook
-*/
-
-_$.fb_init = function(appid, channel) {
-	_$.log("Loading facebook...");
-	if (channel == ""){channel = '//WWW.YOUR_DOMAIN.COM/channel.html';}
-	window.fbAsyncInit = function() {
-		// init the FB JS SDK
-		FB.init({
-			appId      : appid, // App ID from the App Dashboard
-			channelUrl : channel, // Channel File for x-domain communication
-			status     : true, // check the login status upon init?
-			cookie     : true, // set sessions cookies to allow your server to access the session?
-			xfbml      : true  // parse XFBML tags on this page?
-		});
-		// Additional initialization code such as adding Event Listeners goes here
-	};
-	(function(d, debug){
-		var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
-		if (d.getElementById(id)) {return;}
-		js = d.createElement('script'); js.id = id; js.async = true;
-		js.src = "//connect.facebook.net/en_US/all" + (debug ? "/debug" : "") + ".js";
-		ref.parentNode.insertBefore(js, ref);
-	}(document, /*debug*/ false));
-};
-
-_$.fb_recommend = function() {
-	(function(d, s, id) {
-		var js, fjs = d.getElementsByTagName(s)[0];
-		if (d.getElementById(id)) return;
-		js = d.createElement(s); js.id = id;
-		js.src = "//connect.facebook.net/en_GB/all.js#xfbml=1&appId=" + appid;
-		fjs.parentNode.insertBefore(js, fjs);
-	}(document, 'script', 'facebook-jssdk'));
-}
-
-_$.fb_resize = function(h) {
-	if (h == null) {
-		FB.Canvas.setDoneLoading( function(response) {
-			console.log(response.time_delta_ms);
-			FB.Canvas.setAutoGrow();
-		});
-	} else {
-		FB.Canvas.setSize({ height: h });
-	}
-};
-
-_$.fb_login = function(callback_user, callback_friends) {	
-	FB.login(function(response) {
-		if (response.authResponse) {
-			console.log('Logged in.');
-			FB.api('/me', function(response) {
-				var fb_user = {	"id":"Not logged in", "name": "Not logged in", "fname":"Not logged in", "profile":"fb_blank.jpg",
-				"lname":"Not logged in", "email":"Not logged in orr wrong permissions", "age":"Not logged in",
-				"gender":"Not logged in", "locale":"Not logged in", "profile_url":"Not logged in", "friends":[],
-				"education":[], "hometown":{}, "username":"Not logged in", "work":[], "loggedin":false}
-				fb_user["id"] = response.id;
-				fb_user["name"] = response.name;
-				fb_user["fname"] = response.first_name;
-				fb_user["lname"] = response.last_name;
-				fb_user["email"] = response.email;
-				fb_user["locale"] = response.locale;
-				fb_user["gender"] = response.gender;
-				fb_user["profile"] = "graph.facebook.com/picture/" + fb_user["id"];
-				fb_user["loggedin"] = true;
-				callback_user(fb_user);
+	jq.fb = {};
+	jq.fb.init = function(appid, channel) {
+		_$.log("Loading facebook...");
+		if (channel == ""){channel = '//WWW.YOUR_DOMAIN.COM/channel.html';}
+		window.fbAsyncInit = function() {
+			// init the FB JS SDK
+			FB.init({
+				appId      : appid, // App ID from the App Dashboard
+				channelUrl : channel, // Channel File for x-domain communication
+				status     : true, // check the login status upon init?
+				cookie     : true, // set sessions cookies to allow your server to access the session?
+				xfbml      : true  // parse XFBML tags on this page?
 			});
-			FB.api('/me/friends?limit=100000', function(response) {
-				var fb_user = response.data;				
-				callback_friends(fb_user);
-			});			
-		} else {
-			console.log('Login fail.');
-		}
-	}, {scope: 'email'});
-};
-
-_$.fb_wallpost = function(post_name, post_link, post_picture, post_caption, post_description) {
-	//https://developers.facebook.com/docs/reference/dialogs/feed/
-	FB.ui({
+			// Additional initialization code such as adding Event Listeners goes here
+			};
+			(function(d, debug){
+				var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+				if (d.getElementById(id)) {return;}
+				js = d.createElement('script'); js.id = id; js.async = true;
+				js.src = "//connect.facebook.net/en_US/all" + (debug ? "/debug" : "") + ".js";
+				ref.parentNode.insertBefore(js, ref);
+		}(document, /*debug*/ false));
+	};
+	jq.fb.recommend = function() {
+		(function(d, s, id) {
+			var js, fjs = d.getElementsByTagName(s)[0];
+			if (d.getElementById(id)) return;
+			js = d.createElement(s); js.id = id;
+			js.src = "//connect.facebook.net/en_GB/all.js#xfbml=1&appId=" + appid;
+			fjs.parentNode.insertBefore(js, fjs);
+		}(document, 'script', 'facebook-jssdk'));
+	};
+	jq.fb.resize = function(h) {
+		if (!h) FB.Canvas.setDoneLoading( function(response) { FB.Canvas.setAutoGrow(); });
+		if (h) FB.Canvas.setSize({ height: h });		
+	};
+	jq.fb_login = function(callback_user, callback_friends) {	
+		FB.login(function(response) {
+			if (response.authResponse) {
+				_$.log('Logged in.');
+				FB.api('/me', function(response) {
+					_$.fb_user = response;
+					callback_user(fb_user);
+				});
+				FB.api('/me/friends?limit=100000', function(response) {
+					_$.fb_friends = response.data;				
+					callback_friends(fb_user);
+				});			
+			} else {
+				_$.log('Login fail.');
+			}
+		}, {scope: 'email'});
+	};
+	jq.fb_wallpost = function(post_name, post_link, post_picture, post_caption, post_description) {		
+		FB.ui({
 			method: 'feed',
 			name: post_name,
 			link: post_link,
@@ -982,17 +145,593 @@ _$.fb_wallpost = function(post_name, post_link, post_picture, post_caption, post
 			caption: post_caption,
 			description: post_description
 		}, function(response) {
-			if (response && response.post_id) {
-				console.log('Post was published.');
-			} else {
-				console.log('Post was not published.');
+				if (response && response.post_id) {
+					_$.log('Post was published.');
+				} else {
+					_$.log('Post was not published.');
+				}
+			}
+		);
+	};
+	jq.fb.requestName = function(fbid, callback) {		
+		jq.getJSON("http://graph.facebook.com/" + fbid, function(data) {
+			callback(data.name, data.id);
+		});
+	};
+	
+	/*
+		Create SOLO extension to store data
+	*/	
+	
+	jq._solo = {
+		cache:{},
+		settings: {
+			"debug":{"last":""},
+			"body":jq("body"),			
+			"randoms":[]
+		},
+		_init: function(options) {
+			this.settings = jq.extend(true, {}, this.defaults, options);				
+			if (this.settings.debug) this.log("SOLO loaded in debug mode.")
+		},			
+		changeSettings: function(options) {
+			jq.extend(true, {}, this.settings, options);
+		},			
+		io: {
+			/*	Game controller states: 0 - Netural | 1 - onKeyDown | -1 - onKeyUp	*/
+			init : function(mouseonly) {		
+				_$.io.mouse = {};
+				_$.io.keys = {};		
+				_$.io.update();		
+				_$(document).mousemove(function(e) { _$.getMousePosition(e);	});
+				_$(document).mousedown(function(e) {			
+					if (e.target.id.indexOf("canvas_") > -1) {
+						_$.getMousePosition(e);
+						e.preventDefault();				
+					}			
+					switch(e.button) {
+						case 0:
+							_$.io.mouse.left = 1;
+							break;
+						case 1:
+							_$.io.mouse.middle = 1;
+							break;
+						case 2:
+							_$.io.mouse.right = 1;
+							break;
+					}			
+				});
+				_$(document).mouseup(function(e) {			
+					if (e.target.id.indexOf("canvas_") > -1) {
+						_$.getMousePosition(e);
+						e.preventDefault();								
+					}
+					switch(e.button) {
+						case 0:
+							_$.io.mouse.left = -1;
+							break;
+						case 1:
+							_$.io.mouse.middle= -1;
+							break;
+						case 2:
+							_$.io.mouse.right = -1;
+							break;
+					}			
+				});		
+				if (!mouseonly) _$(document).keydown(function(e) { _$.io.getKey(e, true); }).keyup(function(e) { _$.io.getKey(e, false); });		
+				this.active = true;
+			},
+			getKey : function(e, down) {
+					if (!e) return;
+					var val = 1; if (!down) val = -1;
+					var key = String.fromCharCode(e.keyCode).toUpperCase().trim();						
+					if (this.active)
+						switch (key) {
+							case "W": _$.io.keys.up = val;	break;
+							case "D": _$.io.keys.right = val; break;
+							case "A": _$.io.keys.left = val; break;
+							case "S": _$.io.keys.down = val; break;
+							case "E": _$.io.keys.action1 = val; break;
+							case "Q": _$.io.keys.action2 = val; break;
+							case "1": break;
+							case "2": break;
+							case "3": break;
+							default:						
+								if (e.keyCode === 37) { _$.io.keys.left = val; e.preventDefault();}
+								if (e.keyCode === 39) { _$.io.keys.right = val; e.preventDefault();}
+								if (e.keyCode === 38) { _$.io.keys.up = val; e.preventDefault();}
+								if (e.keyCode === 32) { _$.io.keys.space = val; e.preventDefault();}	
+								if (e.keyCode === 17) { _$.io.keys.action1 = val; }
+								if (e.keyCode === 18) { _$.io.keys.action2 = val; }
+								break;
+						}
+					return key;
+			},
+			update : function() {
+				_$.io.keys.left = 0;
+				_$.io.keys.right = 0;
+				_$.io.keys.down = 0;
+				_$.io.keys.up = 0;
+				_$.io.keys.space = 0;
+				_$.io.keys.action1 = 0;
+				_$.io.keys.action2 = 0;
+				
+				if (_$.io.mouse.left === -1) 
+					_$.io.mouse.left = 0;		
+				if (_$.io.mouse.middle === -1) 
+					_$.io.mouse.middle = 0;		
+				if (_$.io.mouse.right === -1)
+					_$.io.mouse.right = 0;		
+			},
+			active : false
+		},
+		log: function(message) {
+			if (this.settings.debug) {
+				if (message !== this.settings.debug.last) {
+					console.log(new Date());
+					console.log(message);
+				}
+			}
+		},
+		setupInputController: function(mouse) { 
+			this.io.init(mouse); 
+		},
+		tick: {	
+			time: {actual:0.00, friendly:0},	
+			update: function(time) {						
+				if (time) {
+					_$.tick.time.actual = time;								
+				} else {
+					time = 0.01;
+					_$.tick.time.actual += time;								
+				}
+				_$.tick.time.friendly = Math.floor(_$.tick.time.actual / 1000);
+				if (_$.io.active) _$.tick.io.update();					
+				jq.fireUpdate();							
+				window.requestAnimationFrame(function(time){ _$.tick.update(time); });		
+			}	
+		}
+	}
+	
+	/*
+		Extend jq() functionality		
+	*/	
+	
+	jq.extend(jq.fn, {				
+		clearStyles: function() {
+			return this.getEl(el).removeAttr("style");
+		},		
+		duplicate: function() {
+			return this.extend({}, obj, {});
+		},
+		getFile: function(callback, type) {			
+			if (type === null || type === "") type = "img";
+			var reader = new FileReader();
+			reader.onload = function(event) { _$.createImage(event.target.result, callback); };
+			reader.readAsDataURL(this.getEl(id, false).files[0]);   
+		},
+		mobileClick: function(callback) {			
+			this.bind('tap click', function(e) {
+				e.preventDefault();			
+				callback(e, this);
+			});
+		},		
+		offset: function() {
+			return this[0].getBoundingClientRect();
+		},		
+		opacity: function(value) {
+			this[0].globalAlpha = value;
+			this[0].css("opacity", value);
+		},
+		resize: function(w, h) {
+			this.attr("width", w).attr("height", h);
+		},
+		vAlign: function() {
+			this.each(				
+				function(i){
+					if (!offset) offset = 0;
+					var ah = jQuery(this).height();
+					var ph = 0;
+					if (!container){
+						ph = jQuery(this).offsetParent().height();
+					} else {
+						ph = jQuery(container).eq(0).height();
+					}					
+					var mh = Math.ceil((ph-ah) / 2);
+					if (margin === true) {
+						jQuery(this).css('margin-top', mh - offset);
+					} else {
+						jQuery(this).css('padding-top', mh - offset);
+					}
+				}
+			);
+		},
+		/*
+			Canvas functionality
+		*/
+		clearCanvas: function() {
+			this[0].getContext('2d').clearRect ( 0 , 0 , this[0].width, this[0].height );
+		},
+		drawCanvasBox: function(x, y, width, height) {
+			this[0].getContext('2d').fillRect(x,y,width,height);
+		},		
+		drawCanvasCircle: function(x, y, radius, color, linewidth, linecolor) {
+			var context = _$.getContext(id);
+			/* TODO : convert x & y to center x & y */
+			context.beginPath();
+			context.arc(x, y, radius, 0, 2 * Math.PI, false);
+			if (color === null) {color = "#000000";}		
+			context.fillStyle = color;
+			context.fill();		
+			if (linewidth !== null || linecolor !== null) {
+				if (linewidth === null) {linewidth = 0;}		
+				if (linecolor === null) {linecolor = "#000000";}
+				context.lineWidth = linewidth;
+				context.strokeStyle = linecolor;
+				context.stroke();
+			}
+		},
+		drawLine: function(x1, y1, x2, y2, strokewidth, color) {
+			var context = this.getContext(id);
+			context.beginPath();
+			context.moveTo(x1, y1);
+			context.lineTo(x2, y2);
+			if (strokewidth !== null && strokewidth !== "") {
+				context.lineWidth = strokewidth;
+			}
+			if (color !== null && color !== "") {
+				context.strokeStyle = color;
+			}
+			context.stroke();
+		},
+		drawRotatedImage: function(options) {			
+			var layer = this.getContext(options.canvas);
+			layer.save();		          
+			layer.translate(options.x, options.y);
+			layer.rotate(options.rotation * (Math.PI/180)); 
+			layer.drawImage(options.img, -(options.width/2), -(options.height/2), options.width, options.height);
+			layer.restore();	
+		},
+		drawText: function(text, x, y, color, font, alignment, base) {
+			var layer = this.getContext(id);
+			if (base !== null && base !== "") {
+				layer.textBaseline = base;
+			}
+			if (alignment !== null && alignment !== "") {
+				layer.textAlign = alignment;
+			}	
+			layer.fillStyle = color;
+			if (font === null || font === "") {
+				font = "30px Arial";
+			}
+			layer.font = font;
+			layer.fillText(text, x, y);
+		},
+		getCanvas: function(id) {
+			return this[0];
+		},
+		getContext: function() {
+			return this[0].getContext('2d');	
+		},
+		/*
+			Canvas image manipulation
+		*/		
+		createImageData: function(imgdata, width, height) {
+			if (width === null) {
+				width = this.getCanvasWidth(id);		
+			}
+			if (height === null) {
+				height = this.getCanvasHeight(id);		
+			}	
+			var data = this.getContext(id).createImageData(width, height);
+			data.data.set(imgdata);
+			return data;
+		},
+		createImageFromCanvas: function(x, y, width, height, callback) {
+			var canvas = document.createElement("canvas");
+			canvas.width = width;
+			canvas.height = height; 
+			var ctx = canvas.getContext("2d");
+			ctx.putImageData(_$.getCanvasImage(id, x, y, width, height), 0, 0); 
+			return _$.createImage(canvas.toDataURL("image/png"), callback);
+		},
+		getCanvasImageData: function(x, y, width, height) {
+			if (!width) width = this.attr("width");					
+			if (!height) height = this.attr("height");
+			if(!x){x=0;} if(!y){y=0;}
+			return this[0].getContext('2d').getImageData(x, y, width, height);	
+		},
+		getImageURL: function(img) {
+			var canvas = document.createElement("canvas");
+			canvas.width = img.width;
+			canvas.height = img.height;    
+			var ctx = canvas.getContext("2d");
+			ctx.drawImage(img, 0, 0);    
+			return canvas.toDataURL("image/png");
+		},		
+		autoLevel: function() {	
+			var imgData = this[0].getContext('2d').getImageData(0, 0, this.width(), this.height());	
+			var histogram = {};
+			for (var i = 0; i < 256; i++) {
+				histogram[i] = 0;
+			}
+			for (var i = 0; i < imgData.data.length; i += 4) {
+				var r = imgData.data[i];
+				var g = imgData.data[i + 1];
+				var b = imgData.data[i + 2];
+
+				var brightest = (r * 0.299) + (g * 0.587) + (b * 0.114);
+				brightest = Math.round(brightest);
+				if (brightest > 255) { brightest = 255; }
+				histogram[brightest]++;
+			}
+			var white = 255;
+			var counter = 0;
+			while ((counter < 200) && (white > 0)) {
+				counter += histogram[white];
+				white--;
+			}
+			var brightest = 1 + ((255 - white) / 256.0);
+			for (var i = 0; i < imgData.data.length; i += 4) {
+				var r = imgData.data[i];
+				var g = imgData.data[i + 1];
+				var b = imgData.data[i + 2];
+				var alpha = -0.2;
+				r = ((1 - alpha) * r) + (alpha * brightest);
+				g = ((1 - alpha) * g) + (alpha * brightest);
+				b = ((1 - alpha) * b) + (alpha * brightest);
+				imgData.data[i] = r;
+				imgData.data[i + 1] = g;
+				imgData.data[i + 2] = b;
+			}
+			this[0].getContext('2d').putImageData(imgData, 0, 0);
+		},
+		changeBrightness: function(val) {
+			if (x == null){x=0;}
+			if (y == null){y=0;}
+			for (var i = 0; i < imgData.data.length; i += 4) {
+				imgData.data[i] += val;
+				imgData.data[i + 1] += val;
+				imgData.data[i + 2] += val;
+			}
+			_$.getContext(canvas).putImageData(imgData, x, y);
+		},
+		changeContrast: function(val) {
+			var v = val;
+			v = (100 + v) / 100;
+			v *= v;
+			
+			for (var i = 0; i < imgData.data.length; i += 4) {
+				var r = imgData.data[i];
+				var g = imgData.data[i + 1];
+				var b = imgData.data[i + 2];
+
+				r /= 255;
+				g /= 255;
+				b /= 255;
+
+				r = (((r - 0.5) * v) + 0.5) * 255;
+				g = (((g - 0.5) * v) + 0.5) * 255;
+				b = (((b - 0.5) * v) + 0.5) * 255;
+
+				if (r > 255) {
+					r = 255;
+				} else if (r < 0) {
+					r = 0;
+				}
+
+				if (g > 255) {
+					g = 255;
+				} else if (g < 0) {
+					g = 0;
+				}
+
+				if (b > 255) {
+					b = 255;
+				} else if (b < 0) {
+					b = 0;
+				}
+
+				imgData.data[i] = r;
+				imgData.data[i + 1] = g;
+				imgData.data[i + 2] = b;
+			}
+			_$.getContext(canvas).putImageData(imgData, x, y);
+		},
+		changeSaturation: function(val) {
+			for (var i = 0; i < imgData.data.length; i += 4) {
+				var r = imgData.data[i];
+				var g = imgData.data[i + 1];
+				var b = imgData.data[i + 2];
+
+				var luminace = (r * 0.299) + (g * 0.587) + (b * 0.114);
+				var alpha = -val;
+
+				r = ((1 - alpha) * r) + (alpha * luminace);
+				g = ((1 - alpha) * g) + (alpha * luminace);
+				b = ((1 - alpha) * b) + (alpha * luminace);
+
+				imgData.data[i] = r;
+				imgData.data[i + 1] = g;
+				imgData.data[i + 2] = b;
+			}
+			_$.getContext(canvas).putImageData(imgData, x, y);
+		},
+		invertPixels: function(x, y) {	
+			if (!x) x = 0;
+			if (!y) y = 0;
+			var imageData = this[0].getContext('2d').getImageData(x, y, this.width(), this.height());	
+			var p = imageData.data;		
+			for (var i = 0, n = p.length; i < n; i += 4) {		
+				p[i] = 255 - p[i];
+				p[i +1] = 255 - p[i+1];
+				p[i+2] = 255 - p[i+2];		
+			}
+			imageData.data = p;
+			this[0].getContext('2d').putImageData(imageData, x, y);
+		}
+	});
+	
+	/*
+		Add baseline $. functionality
+	*/
+	
+	// Calculate an angle between two points
+	jq.angle = function(endx, endy) {
+		var destx = endx; var desty = -endy;    
+		var deltaX = destx - 370; var deltaY = desty - (150 * -1);      
+		var angle = deltaY / deltaX;
+		return desty - (angle * destx);
+	};
+	// Cleanup an array of objects with .destroy active
+	jq.cleanupArray = function(arr) {
+		var deleting = [];
+		for (var i = 0; i < arr.length; i++) {
+			if (arr[i].destroy === true) {
+				deleting.push(i - deleting.length);
 			}
 		}
-	);
-};
-
-_$.fb_request_name = function(fbid, callback) {		
-	this.getJSON("http://graph.facebook.com/" + fbid, function(data) {
-		callback(data.name, data.id);
-	});
-};
+		for (var i = 0; i < deleting.length; i++) {
+			this.removeFromArray(arr, deleting[i]);
+		}
+	};
+	// Do 2 boxes collide
+	jq.boxCollision = function(box1, box2) {
+		if (!box1 || !box2)
+			return false;
+		if (!((box1.x + box1.width) >= box2.x)) 
+			return false;     
+		if (!(box1.x <= (box2.x + box2.width)))	
+			return false;	
+		if (!((box1.y + box1.height) >= box2.y)) 
+			return false;
+		if (!(box1.y <= (box2.y + box2.height))) 
+			return false;		
+		return true;		
+	};
+	// Fire our update event
+	jq.fireUpdate = function(name) {
+		if (!name) name = "tick";
+		jq(document).trigger(name);
+	};
+	// Get curosr position
+	jq.getCursorPosition = function(e) {	
+		if (e.target.id === "") return [0,0];
+		if (jq(e.target.id).length === 0) return [0,0];	
+		var rect = jq("#" + e.target.id).offset();
+		var x = (e.clientX - rect.left);
+		var y = (e.clientY - rect.top);
+		return [x,y];
+	};
+	// Return x,y points on a three point curve
+	jq.getCurvePoints = function(x1, y1, x2, y2, x3, y3, dir) {	
+		a = ((y2-y1)*(x1-x3) + (y3-y1)*(x2-x1))/((x1-x3)*(x2*x2-x1*x1) + (x2-x1)*(x3*x3-x1*x1));
+		b = ((y2 - y1) - a*(x2*x2 - x1*x1)) / (x2-x1);
+		c = y1 - a*x1*x1 - b*x1;		
+		var points = [];
+		if (x3 > x1) {
+			for (var i = x1; i <= Math.abs(x3); i++) {
+				points.push({"x":i, "y": (a * (i * i) + (b * i) + c)});
+			}
+		} else {
+			for (var i = x1; i >= x3; i--) {
+				points.push({"x":i, "y": (a * (i * i) + (b * i) + c)});
+			}
+		}	
+		return points;
+	};
+	// Get mouse position
+	jq.getMousePosition = function(e) {
+		_$.mx = jq.getCursorPosition(e)[0];
+		_$.my = jq.getCursorPosition(e)[1];
+		return {"x":_$.mx, "y":_$.my}; 
+	};
+	// Useful event shortcuts
+	jq.onReady = function(callback) {
+		jq(document).ready(function(){callback();});
+	};
+	jq.onResize = function(callback) {
+		jq(window).resize(function(){callback();});
+	};
+	// Create preloader
+	jq.createPreloader = function(images, callback, html, timeout) {	
+		var preloader = {};
+		preloader.preloaded = 0;
+		preloader.cache = [];
+		
+		if (typeof(callback) === "function") {preloader.callback = callback;}
+		if (timeout === null) {timeout = 0;}
+		
+		preloader.loaded = function() {		
+			this.preloaded--;
+			if (this.preloaded <= 0) {			
+				this.callback();
+			}
+		};
+		preloader.remove = function() {
+			_$.getEl("preloader").remove();
+		};			
+		
+		if (html === null) {
+			preloader.html = jQuery("<div>").addClass("preloader").attr("id","preloader");
+			preloader.html.append(jQuery("<img>").attr("src", "img/website/spinner.gif"));
+		}	
+		preloader.html = html;
+		this.getEl("body").append(preloader.html);
+			
+		if (images && images.length > 0) {		
+			preloader.preloaded = images.length;		
+			for (var i = 0; i < images.length; i++) {
+				preloader.cache.push(this.createImage(images[i], function(){
+					preloader.loaded();
+				}));
+			}		
+		} else {		
+			setTimeout(preloader.loaded, timeout);
+		}
+		return preloader;
+	};
+	// A more random random number
+	jq.random = function(num, min, seed) {
+		if (min === null) min = 0; 		
+		if (typeof(_$.randoms[num + "_" + min]) === "undefined") _$.randoms[num + "_" + min] = new MersenneTwister(seed);	
+		return Math.floor(_$.randoms[num + "_" + min].random()*(num-min)) + min;
+	};
+	// Register a function to our update event
+	jq.registerUpdate = function(callback, name) {
+		if (!name) name = "tick";
+		jq(document).bind(name, callback);
+	};
+	// Remove from array
+	jq.removeFromArray = function(obj, index, amount) {
+		if (!amount) {amount = 1;}
+		obj.splice(index,amount);
+	};
+	// Shuffle array
+	jq.shuffleArray = function(arr) {
+		var i = arr.length, j, tempi, tempj;
+		if (i === 0) return arr;
+		while (--i) {
+			j = Math.floor(Math.random() * ( i + 1 ));
+			tempi = arr[i];
+			tempj = arr[j];
+			arr[i] = tempj;
+			arr[j] = tempi;
+		}
+		return arr;
+	};	
+	// Latest browser detection methods
+	jq.doBrowserDetection = function() {		
+		_$.detection = {};
+		_$.detection.isOpera = !!window.opera || navigator.userAgent.indexOf('Opera') >= 0;
+		/*Opera 8.0+ (UA detection to detect Blink/v8-powered Opera)*/
+		_$.detection.isFirefox = typeof InstallTrigger !== 'undefined'; /* Firefox 1.0+*/
+		_$.detection.isSafari = Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0;
+		/*At least Safari 3+: "[object HTMLElementConstructor]"*/
+		_$.detection.isChrome = !!window.chrome; /* Chrome 1+*/
+		_$.detection.isIE = /*@cc_on!@*/false;  /* At least IE6*/		
+	};
+}(jQuery));
+$ = jQuery; //Remove inconsistences
+_$ = jQuery._solo;
+_$.tick.update();
