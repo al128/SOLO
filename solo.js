@@ -36,7 +36,7 @@ if (typeof($) == "undefined" && typeof(jQuery) == "undefined") {
 */
 
 String.prototype.capitalize = function() {
-    return this.charAt(0).toUpperCase() + this.slice(1);
+  return this.charAt(0).toUpperCase() + this.slice(1);
 };
 String.prototype.createImage = function(callback) {
   var img = document.createElement("img");
@@ -159,6 +159,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
   */
 
   jq._solo = {
+    randoms:{},
     cache:{},
     settings: {
       "debug":{"last":""},
@@ -285,7 +286,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
           time = 0.01;
           _$.tick.time.actual += time;
         }
-        _$.tick.time.friendly = Math.floor(_$.tick.time.actual * 100) / 100;
+        _$.tick.time.friendly = Math.floor(_$.tick.time.actual / 1000);
         if (_$.io.active) _$.io.update();
         jq.fireUpdate();
         window.requestAnimationFrame(function(time){ _$.tick.update(time); });
@@ -380,68 +381,10 @@ String.prototype.trunc = function(n,useWordBoundary) {
         }
       );
     },
-    /*
-      Canvas functionality
-    */
-    drawCanvasCircle: function(x, y, radius, color, linewidth, linecolor) {
-      var context = _$.getContext(id);
-      /* TODO : convert x & y to center x & y */
-      context.beginPath();
-      context.arc(x, y, radius, 0, 2 * Math.PI, false);
-      if (color === null) {color = "#000000";}
-      context.fillStyle = color;
-      context.fill();
-      if (linewidth !== null || linecolor !== null) {
-        if (linewidth === null) {linewidth = 0;}
-        if (linecolor === null) {linecolor = "#000000";}
-        context.lineWidth = linewidth;
-        context.strokeStyle = linecolor;
-        context.stroke();
-      }
-    },
-    drawLine: function(x1, y1, x2, y2, strokewidth, color) {
-      var context = this.getContext(id);
-      context.beginPath();
-      context.moveTo(x1, y1);
-      context.lineTo(x2, y2);
-      if (strokewidth !== null && strokewidth !== "") {
-        context.lineWidth = strokewidth;
-      }
-      if (color !== null && color !== "") {
-        context.strokeStyle = color;
-      }
-      context.stroke();
-    },
-    drawRotatedImage: function(options) {
-      var layer = this.getContext(options.canvas);
-      layer.save();
-      layer.translate(options.x, options.y);
-      layer.rotate(options.rotation * (Math.PI/180));
-      layer.drawImage(options.img, -(options.width/2), -(options.height/2), options.width, options.height);
-      layer.restore();
-    },
+
     /*
       Canvas image manipulation
     */
-    createImageData: function(imgdata, width, height) {
-      if (width === null) {
-        width = this.getCanvasWidth(id);
-      }
-      if (height === null) {
-        height = this.getCanvasHeight(id);
-      }
-      var data = this.getContext(id).createImageData(width, height);
-      data.data.set(imgdata);
-      return data;
-    },
-    getImageURL: function(img) {
-      var canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      var ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      return canvas.toDataURL("image/png");
-    },
     autoLevel: function() {
       var imgData = this[0].getContext('2d').getImageData(0, 0, this.width(), this.height());
       var histogram = {};
@@ -668,7 +611,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
   };
   // A more random random number
   jq.random = function(num, min, seed) {
-    if (min === null) min = 0;
+    if (!min) min = 0;
     if (typeof(_$.randoms[num + "_" + min]) === "undefined") _$.randoms[num + "_" + min] = new MersenneTwister(seed);
     return Math.floor(_$.randoms[num + "_" + min].random()*(num-min)) + min;
   };
@@ -731,6 +674,8 @@ String.prototype.trunc = function(n,useWordBoundary) {
     };
     cx.drawText = function(options) {
       if (_$.detection.ie8) return;
+      if (!options.text) return false;
+
       function wrapText(context, text, x, y, maxWidth, lineHeight) {
         text = String(text);
         var words = text.split(' ');
@@ -756,8 +701,6 @@ String.prototype.trunc = function(n,useWordBoundary) {
         context.fillText(line, x, y);
       }
 
-      if (!options.text)
-        return false;
       if (options.base)
         this.textBaseline = options.baseline;
       if (options.alignment)
@@ -766,10 +709,39 @@ String.prototype.trunc = function(n,useWordBoundary) {
         this.fillStyle = options.color;
       if (!options.font)
         options.font = "18px Arial";
-
       this.font = options.font;
-      wrapText(this, options.text, options.x, options.y, options.maxWidth, options.lineHeight);
+
+      if (options.maxWidth && options.lineHeight) {
+        wrapText(this, options.text, options.x, options.y, options.maxWidth, options.lineHeight);
+      } else {
+        this.fillText(options.text, options.x, options.y);
+      }
     };
+    cx.drawLine = function(options) {
+      if (!options) return;
+      this.beginPath();
+      this.moveTo(options.x1, options.y1);
+      this.lineTo(options.x2, options.y2);
+      if (options.strokewidth) this.lineWidth = options.strokewidth;
+      if (options.color) this.strokeStyle = options.color;
+      this.stroke();
+    };
+    cx.drawCircle = function(options) {
+      /* TODO : convert x & y to center x & y */
+      this.beginPath();
+      this.arc(options.x, options.y, options.radius, 0, 2 * Math.PI, false);
+
+      if (!options.color) options.color = "#000000";
+      this.fillStyle = options.color;
+      this.fill();
+
+      if (!options.linewidth && !options.linecolor) return;
+      if (!options.linewidth) options.linewidth = 0;
+      if (!options.linecolor) options.linecolor = "#000000";
+      this.lineWidth = options.linewidth;
+      this.strokeStyle = options.linecolor;
+      this.stroke();
+    },
     cx.drawSquare = function(options) {
       this.fillColor = options.color;
       this.fillRect(options.x,options.y,options.width,options.height);
