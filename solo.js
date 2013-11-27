@@ -831,7 +831,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
       var buffer = document.createElement('canvas');
       buffer.width = fg.width;
       buffer.height = fg.height;
-      var bx = buffer.get2d();
+      var bx = jq(buffer).get2d();
 
       // fill offscreen buffer with the tint color
       bx.fillStyle = color;
