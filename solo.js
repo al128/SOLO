@@ -93,15 +93,6 @@ String.prototype.trunc = function(n,useWordBoundary) {
         ref.parentNode.insertBefore(js, ref);
     }(document, /*debug*/ false));
   };
-  jq.fb.recommend = function() {
-    (function(d, s, id) {
-      var js, fjs = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) return;
-      js = d.createElement(s); js.id = id;
-      js.src = "//connect.facebook.net/en_GB/all.js#xfbml=1&appId=" + appid;
-      fjs.parentNode.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
-  };
   jq.fb.resize = function(h) {
     if (!h) FB.Canvas.setDoneLoading( function(response) { FB.Canvas.setAutoGrow(); });
     if (h) FB.Canvas.setSize({ height: h });
@@ -167,16 +158,18 @@ String.prototype.trunc = function(n,useWordBoundary) {
     },
     io: {
       /*  Game controller states: 0 - Netural | 1 - onKeyDown | -1 - onKeyUp  */
-      init : function(mouseonly) {
-        jq._solo.io.mouse = {"start":{"x":0,"y":0}};
+      init : function(mouse_el, mouseonly) {
+        jq._solo.io.mouse = {"start":null, left : 0};
         jq._solo.io.keys = {};
         jq._solo.io.update();
-        jq(document).mousemove(function(e) {
+
+        if (!mouse_el) mouse_el = jq(document);
+        mouse_el.mousemove(function(e) {
           if (e.target.tagName.toLowerCase().indexOf("canvas") > -1) {
             jq.getMousePosition(e);
           }
         });
-        jq(document).mousedown(function(e) {
+        mouse_el.mousedown(function(e) {
           if (e.target.tagName.toLowerCase().indexOf("canvas") > -1) {
             jq.getMousePosition(e);
             e.preventDefault();
@@ -197,7 +190,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
               break;
           }
         });
-        jq(document).mouseup(function(e) {
+        mouse_el.mouseup(function(e) {
           if (e.target.tagName.toLowerCase().indexOf("canvas") > -1) {
             jq.getMousePosition(e);
             e.preventDefault();
@@ -295,11 +288,28 @@ String.prototype.trunc = function(n,useWordBoundary) {
   jq.extend(jq.fn, {
     get2d: function() {
       var cx = this.get(0);
-      jq.doBrowserDetection();
-      if (_$.detection.ie8) {
-        G_vmlCanvasManager.initElement(cx);
+      try {
+
+        jq.doBrowserDetection();
+        if (_$.detection.ie8) {
+          G_vmlCanvasManager.initElement(cx);
+        } else {
+
+          var ctx = document.createElement('canvas').getContext('2d');
+          ctx.globalCompositeOperation = 'screen';
+          if (ctx.globalCompositeOperation == 'screen') {
+            $("html").addClass("colorblending")
+          } else {
+            $("html").addClass("no-colorblending")
+          }
+
+        }
+        return jq.setupEnhancedContext(cx.getContext('2d'));
+
+      } catch (e) {
+        console.log("Canvas not supported");
+        return;
       }
-      return jq.setupEnhancedContext(cx.getContext('2d'));
     },
     clearStyles: function() {
       return this.removeAttr("style");
@@ -539,6 +549,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
       _$.detection.isSafari = Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0;
       /*At least Safari 3+: "[object HTMLElementConstructor]"*/
       _$.detection.isChrome = !!window.chrome; /* Chrome 1+*/
+
       _$.detection.isIE = /*@cc_on!@*/false;  /* At least IE6*/
       function getInternetExplorerVersion() {
         var rv = -1; // Return value assumes failure.
@@ -634,7 +645,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
       this.stroke();
     },
     cx.drawSquare = function(options) {
-      this.fillColor = options.color;
+      this.fillStyle = options.color;
       this.fillRect(options.x,options.y,options.width,options.height);
     };
     cx.drawRotatedImage = function(options) {
@@ -827,6 +838,17 @@ String.prototype.trunc = function(n,useWordBoundary) {
       this.drawImage(buffer,0,0);
 
       return this.getCanvasImageData();
+    }
+    cx.applyBlend = function(blend) {
+      /*
+      normal | multiply | screen | overlay |
+      darken | lighten | color-dodge | color-burn | hard-light |
+      soft-light | difference | exclusion | hue | saturation |
+      color | luminosity
+      */
+
+      if (!blend) blend = 'normal';
+      this.globalCompositeOperation = blend;
     }
     cx.invertPixels = function() {
       var imageData = this.getCanvasImageData();
