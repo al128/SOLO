@@ -70,7 +70,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
     Create Facebook extension
   */
 
-  jq.fb = {};
+  jq.fb = {};jq.twitter = {};jq.geo = {};
   jq.fb.init = function(appid, channel) {
     _$.log("Loading facebook...");
     if (channel == ""){channel = '//WWW.YOUR_DOMAIN.COM/channel.html';}
@@ -136,6 +136,36 @@ String.prototype.trunc = function(n,useWordBoundary) {
       callback(data.name, data.id);
     });
   };
+  jq.twitter.share = function() {
+    ("https://twitter.com/intent/tweet?text=mytexthere&url=myurl").goTo();
+  }
+  jq.geo.getLocation = function(callback) {
+    //upgrade to https://code.google.com/p/geo-location-javascript/
+    if (!callback) return;
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(function(position) {
+        callback(position);
+      });
+    } else {
+      callback(null);
+    }
+  }
+  jq.geo.getDetailedLocation = function(callback, service) {
+    if (!callback) return;
+    if (!service) service = "google";
+    switch(service) {
+      case 'google':
+        jq.geo.getLocation(function(position) {
+          jq.getJSON("http://maps.googleapis.com/maps/api/geocode/json?latlng=" + position.latitude + "," + position.longitude + "&sensor=true", function(data) {
+            callback(data);
+          });
+        });
+        break;
+      default:
+        callback(null);
+        break;
+    }
+  }
 
   /*
     Create SOLO extension to store data
@@ -189,6 +219,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
               jq._solo.io.mouse.right = 1;
               break;
           }
+          jq.fireUpdate("io.left.down");
         });
         mouse_el.mouseup(function(e) {
           if (e.target.tagName.toLowerCase().indexOf("canvas") > -1) {
@@ -207,6 +238,7 @@ String.prototype.trunc = function(n,useWordBoundary) {
               jq._solo.io.mouse.right = -1;
               break;
           }
+          jq.fireUpdate("io.left.up");
         });
         if (mouseonly === false) jq(document).keydown(function(e) { jq.io.getKey(e, true); }).keyup(function(e) { jq.io.getKey(e, false); });
         this.active = true;
@@ -296,11 +328,11 @@ String.prototype.trunc = function(n,useWordBoundary) {
         } else {
 
           var ctx = document.createElement('canvas').getContext('2d');
-          ctx.globalCompositeOperation = 'screen';
-          if (ctx.globalCompositeOperation == 'screen') {
-            $("html").addClass("colorblending")
+          ctx.globalCompositeOperation = 'color';
+          if (ctx.globalCompositeOperation == 'color') {
+            $("html").addClass("colorblending");
           } else {
-            $("html").addClass("no-colorblending")
+            $("html").addClass("no-colorblending");
           }
 
         }
@@ -849,6 +881,9 @@ String.prototype.trunc = function(n,useWordBoundary) {
 
       if (!blend) blend = 'normal';
       this.globalCompositeOperation = blend;
+    }
+    cx.resetBlend = function() {
+      this.globalCompositeOperation = 'source-over';
     }
     cx.invertPixels = function() {
       var imageData = this.getCanvasImageData();
