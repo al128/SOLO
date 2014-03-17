@@ -47,9 +47,10 @@ String.prototype.get = function() {
 }
 
 /* Create image from string path */
-String.prototype.createImage = function(callback) {
+String.prototype.createImage = function(callback, cross) {
   var img = document.createElement("img");
-  img.crossOrigin = "Anonymous";
+  if (cross !== false)
+    img.crossOrigin = "Anonymous";
   img.src = this;
   if (callback) img.onload = function() { callback(this); };
   return img;
@@ -164,12 +165,15 @@ String.prototype.log = function(e) {
 };
 
 /* Calculate an angle between two points */
-Math.calcAngle = function(endx, endy) {
-  var destx = endx; var desty = -endy;
-  var deltaX = destx - 370; var deltaY = desty - (150 * -1);
-  var angle = deltaY / deltaX;
-  return desty - (angle * destx);
+Math.calcAngle = function(x1, y1, x2, y2) {
+  return Math.toRadians(Math.atan2(y2 - y1, x2 - x1));
 };
+
+/* To Radians */
+
+Math.toRadians = function(num) {
+  return num * (180 / Math.PI);
+}
 
 /* Distance between two points */
 Math.lineDistance = function(x1, y1, x2, y2) {
@@ -210,9 +214,9 @@ Element.prototype.getFile = function(options) {
   if (options.onload) {
     reader.onload = function(event) {
       if (options.onloadend)
-        options.onloadend(this.file.name);
-      if (options.type === "img")
-        event.target.result.createImage(options.onload);
+        options.onloadend(this.file);
+      if (options.type === "image")
+        event.target.result.createImage(options.onload, false);
     };
   }
 
@@ -324,8 +328,16 @@ if (typeof(CanvasRenderingContext2D) !== "undefined") {
   /* Draw an image with rotation options */
   CanvasRenderingContext2D.prototype.draw = function(options) {
     this.save();
+
+    if (typeof(options.scale) === "number") {
+      options.width = options.width * options.scale;
+      options.height = options.height * options.scale;
+    }
+
     this.translate(options.x + (options.width / 2), options.y + (options.height / 2));
-    this.rotate(options.rotation * (Math.PI/180));
+    if (typeof(options.rotation) === "number") {
+      this.rotate(options.rotation * (Math.PI/180));
+    }
 
     var image = options.image;
     if (options.effect) {
@@ -346,7 +358,7 @@ if (typeof(CanvasRenderingContext2D) !== "undefined") {
       }
     }
 
-    this.drawImage(image, -(options.width/2), -(options.height/2), options.width, options.height);
+    this.drawImage(image, (this.canvas.width/2) - (options.width/2), (this.canvas.height/2) - (options.height/2), options.width, options.height);
     this.restore();
   };
 
@@ -359,4 +371,4 @@ if (typeof(CanvasRenderingContext2D) !== "undefined") {
   CanvasRenderingContext2D.prototype.clearBlend = function() {
     this.globalCompositeOperation = 'source-over';
   };
-}  
+}
