@@ -16,15 +16,22 @@ function SoloKeyboard() {
   });
 
   function getKey(e, _down) {
-		var val = 1; if (!_down) val = -1;
+		var val = 1;
+    var ev = "io.key.down";
+    if (!_down) {
+      val = -1;
+      ev = "io.key.up";
+    }
+    ev.fireEvent(e);
+
 		var key = String.fromCharCode(e.keyCode).toUpperCase().trim();
 		switch (key) {
-			case "W": up = val; break;
-			case "D": right = val; break;
-			case "A": left = val; break;
-			case "S": down = val; break;
-			case "E": action1 = val; break;
-			case "Q": action2 = val; break;
+			case "W": up = val; ev += "up"; break;
+			case "D": right = val; ev += "right"; break;
+			case "A": left = val; ev += "left"; break;
+			case "S": down = val; ev += "down"; break;
+			case "E": action1 = val; ev += "action1"; break;
+			case "Q": action2 = val; ev += "action2"; break;
 			default:
 			if (e.keyCode === 37) { left = val; e.preventDefault(); }
 			if (e.keyCode === 39) { right = val; e.preventDefault(); }
@@ -35,6 +42,8 @@ function SoloKeyboard() {
 			if (e.keyCode === 18) { action2 = val; }
 			break;
 		}
+
+    ev.fireEvent(e);
 		return key;
   }
 

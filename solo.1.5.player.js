@@ -1,84 +1,5 @@
 /* Requires solo.base and solo.keyboard */
 
-function SoloAnimation(animation_settings) {
-  var active = false; //Running on update
-  var start; //Start time in ms
-  var current = 0; //Current slide index
-  var interval = 500; //Time between slides in ms
-  var repeat = true; //Recycle animation
-  var slides = 0; //Number of slides
-  var width = 0, height = 0; //Width/height of each slide in pixels
-  var image; //Contains our sprites
-
-  var context;
-  var canvas;
-
-  function init(s) {
-    start = getCurrentTime();
-
-    if (s.image) image = s.image;
-    if (s.width) width = parseInt(s.width);
-    if (s.height) height = parseInt(s.height);
-    if (s.slides) slides = parseInt(s.slides);
-    if (s.interval) interval = parseInt(s.interval);
-    if (s.repeat) repeat = s.repeat;
-
-    if (width === 0) width = Math.floor(image.naturalWidth / s.slides);
-    if (height === 0) height = width;
-
-    resume();
-  }
-  init(animation_settings);
-
-  function play() {
-    if (!active) return current_image;
-    return update();
-  };
-
-  function update() {
-    if (getCurrentTime() - start > interval)
-      return next();
-    if (canvas)
-      return canvas;
-    return createCurrentImage();
-  };
-
-  function next() {
-    start = getCurrentTime();
-    current++;
-    if (current >= slides && repeat) current = 0;
-    return createCurrentImage();
-  };
-
-  function getCurrentTime() {
-    return new Date().getTime();
-  }
-
-  function pause() {
-    active = false;
-  };
-
-  function resume() {
-    active = true;
-  };
-
-  function createCurrentImage() {
-    if (!canvas) canvas = document.createElement("canvas");
-    if (!context) context = canvas.getContext('2d');
-    canvas.width = width;
-    canvas.height = height;
-    context.drawImage(image, -(width * current), 0, image.naturalWidth, image.naturalHeight);
-    return canvas;
-  }
-
-  return {
-    play : play,
-    next: next,
-    pause: pause,
-    resume: resume
-  }
-};
-
 function SoloCharacterControl(context, options) {
 
   /* Init */
@@ -92,20 +13,21 @@ function SoloCharacterControl(context, options) {
   var steps = 0;
   var jumping = false, falling = false;
   var collider = true;
-  var img;
   var destroy = false;
   var hp = 100, mp = 100, ap = 10;
-  var direction = "right";
+  var direction = "right", previousdirection = "right", desireddirection = "";
   var animations = {};
   var controllable = true;
   var active = false;
   var bounds;
   var gscreen;
   var gravity = 0.5, jumpheight = 10;
-  var keyboard;
+  var keyboard, mouse;
   var type = "sidescroller";
   var pacman = false; //Assigning pacman variable keeps player moving until told to stop
   var canchange = true;
+  var o_options;
+  var updated = false;
 
   function setupBounds(gscreen) {
     bounds = {
@@ -122,9 +44,14 @@ function SoloCharacterControl(context, options) {
 
   function init(context, options) {
     if (!context) return;
+    o_options = options;
     gscreen = context;
     setupBounds(gscreen);
-    setupImage(options.image);
+
+    canchange = true;
+    direction = "right";
+    previousdirection = "right";
+    desireddirection = "";
 
     if (options.x) x = options.x;
     if (options.y) y = options.y;
@@ -138,6 +65,10 @@ function SoloCharacterControl(context, options) {
     if (options.pacman) pacman = options.pacman;
 
     keyboard = new SoloKeyboard();
+    if (SoloMouse) {
+      mouse = new SoloMouse(context.canvas);
+      registerMouse();
+    }
 
     origx = x;
     origy = y;
@@ -145,6 +76,25 @@ function SoloCharacterControl(context, options) {
     active = true;
   }
   init(context, options);
+
+  function registerMouse() {
+    var directions = ["left", "right", "up", "down"];
+    for (var i = 0 ; i < directions.length; i++) {
+      (function(d) {
+        ("io.swipe." + d).registerEvent(function(){
+          if (canchange) {
+            direction = d;
+          } else {
+            desireddirection = d;
+          }
+        });
+      })(directions[i]);
+    }
+  }
+
+  function reset() {
+    init(gscreen, o_options);
+  }
 
   /* Updating */
 
@@ -178,10 +128,6 @@ function SoloCharacterControl(context, options) {
     if (direction !== "down") return;
     doVMove(dy);
     return true;
-  }
-
-  function moveStop() {
-    direction = "";
   }
 
   function doHMove(distance) {
@@ -255,25 +201,32 @@ function SoloCharacterControl(context, options) {
   };
 
   function update(colliders) {
-    if (!active) return;
+    updated = true;
+
+    if (direction != "") previousdirection = direction;
 
     lastx = x;
     lasty = y;
 
-    if (!controllable) {
+    if (active && !controllable) {
       x += dx;
       y += dy;
       return;
     }
 
     keys = keyboard.getKeys();
+    cursor = mouse.getMouse();
 
-    if (keys.left === 1 && (canchange || direction == "right"))
+    if (keys.left === 1)
+      desireddirection = "left";
+    if ((keys.left === 1 || cursor.direction == "left") && (canchange || direction == "right"))
       direction = "left";
     if (keys.left === -1 && !pacman)
       if (direction == "left") direction = "";
 
-    if (keys.right === 1 && (canchange || direction == "left"))
+    if (keys.right === 1)
+      desireddirection = "right";
+    if ((keys.right === 1 || cursor.direction == "right") && (canchange || direction == "left"))
       direction = "right";
     if (keys.right === -1 && !pacman)
       if (direction == "right") direction = "";
@@ -284,16 +237,22 @@ function SoloCharacterControl(context, options) {
       if (keys.up === -1 || keys.space === -1)
         stopJump();
     } else {
-      if (keys.up === 1 && (canchange || direction == "down"))
+      if (keys.up === 1)
+        desireddirection = "up";
+      if ((keys.up === 1 || cursor.direction == "up") && (canchange || direction == "down"))
         direction = "up";
       if (keys.up === -1 && !pacman)
         if (direction == "up") direction = "";
 
-      if (keys.down === 1 && (canchange || direction == "up"))
+      if (keys.down === 1)
+        desireddirection = "down";
+      if ((keys.down === 1 || cursor.direction == "down") && (canchange || direction == "up"))
         direction = "down";
       if (keys.down === -1 && !pacman)
         if (direction == "down") direction = "";
     }
+
+    if (!active) return;
 
     handleMoving();
     if (colliders)
@@ -329,6 +288,13 @@ function SoloCharacterControl(context, options) {
     return getBoundingBox();
   }
 
+  function updatePosition(_x, _y, _dx, _dy) {
+    if (!isNaN(_x)) x = _x;
+    if (!isNaN(_y)) y = _y;
+    if (!isNaN(_dx)) dx = _dx;
+    if (!isNaN(_dy)) dy = _dy;
+  }
+
   function undo() {
     if (!lastx || !lasty) return;
     x = lastx;
@@ -336,27 +302,38 @@ function SoloCharacterControl(context, options) {
     direction = "";
   }
 
+  function cantChange() {
+    canchange = false;
+  }
+
+  function canChange() {
+    canchange = true;
+    if (pacman && desireddirection != "" && desireddirection != previousdirection)
+      direction = desireddirection;
+  }
+
+  function moveStop() {
+    direction = "";
+  }
+
   /* Drawing */
 
-  function setupImage(image) {
-    if (!image) return;
-    if (typeof(img) == "string") {
-      img = image.createImage(img);
-    } else {
-      img = image;
-    }
-  }
-
-  function changeImage(image) {
-    setupImage(image);
-  }
-
   function draw() {
-    var currimg = img;
-    if (animations["walk_" + direction])
+    var currimg;
+    if (animations["idle"])
+      currimg = animations["idle"].play();
+    if (updated && animations["walk_" + direction])
       currimg = animations["walk_" + direction].play();
-    if (currimg)
-      gscreen.drawImage(currimg, x, y, width, height);
+    if (updated && direction == "" && previousdirection != "" && animations["walk_" + previousdirection])
+      currimg = animations["walk_" + previousdirection].getStatic();
+
+    if (currimg) {
+      if (pacman) {
+        gscreen.drawImage(currimg, x - (width * 0.25), y - (height * 0.25), width * 1.75 , height * 1.75);
+      } else {
+        gscreen.drawImage(currimg, x, y, width, height);
+      }
+    }
   }
 
   function getBoundingBox() {
@@ -375,14 +352,6 @@ function SoloCharacterControl(context, options) {
     return direction;
   }
 
-  function cantChange() {
-    canchange = false;
-  }
-
-  function canChange() {
-    canchange = true;
-  }
-
   function kill() {
     destroy = true;
   }
@@ -399,10 +368,134 @@ function SoloCharacterControl(context, options) {
     undo: undo,
     stopMoving: moveStop,
     getDirection: getDirection,
-    changeImage: changeImage,
     cantChange: cantChange,
     canChange: canChange,
     kill: kill,
-    isDead: isDead
+    isDead: isDead,
+    updatePosition: updatePosition,
+    reset: reset
   }
 }
+
+function SoloAnimation(animation_settings) {
+  var active = false; //Running on update
+  var start; //Start time in ms
+  var current = 0; //Current slide index
+  var interval = 500; //Time between slides in ms
+  var repeat = true; //Recycle animation
+  var slides = 0; //Number of slides
+  var width = 0, height = 0; //Width/height of each slide in pixels
+  var image; //Contains our sprites
+  var originx = 0;
+  var originy = 0;
+  var offsetx = 0, offsety;
+  var pingpong = false;
+  var direction = "right";
+  var static_index = 0;
+  var vertical = false;
+
+  var context;
+  var canvas;
+
+  function init(s) {
+    start = getCurrentTime();
+
+    if (s.image) image = s.image;
+    if (s.width) width = parseInt(s.width);
+    if (s.height) height = parseInt(s.height);
+    if (s.slides) slides = parseInt(s.slides);
+    if (s.interval) interval = parseInt(s.interval);
+    if (s.repeat) repeat = s.repeat;
+    if (s.originx) originx = s.originx;
+    if (s.originy) originy = s.originy;
+    if (s.pingpong) pingpong = true;
+    if (s.vertical) {
+      vertical = true;
+    }
+    if (s.static) static_index = s.static;
+    if (s.offsetx) offsetx = s.offsetx;
+    if (s.offsety) offsety = s.offsety;
+
+    if (width === 0) width = Math.floor(image.naturalWidth / s.slides);
+    if (height === 0) height = width;
+
+    resume();
+  }
+  init(animation_settings);
+
+  function static() {
+    return createCurrentImage(static_index);
+  }
+
+  function play() {
+    if (!active) return current_image;
+    return update();
+  };
+
+  function update() {
+    if (getCurrentTime() - start > interval)
+      return next();
+    if (canvas)
+      return canvas;
+    return createCurrentImage();
+  };
+
+  function next() {
+    start = getCurrentTime();
+
+    if (direction == "right")
+      current++;
+    if (direction == "left")
+      current--;
+
+    if (current < 0) {
+      current ++;
+      direction = "right";
+    }
+
+    if (current >= slides) {
+      if (pingpong) {
+        current -= 2;
+        direction = "left";
+      } else if (repeat) {
+        current = 0;
+      }
+    }
+
+    return createCurrentImage();
+  };
+
+  function getCurrentTime() {
+    return new Date().getTime();
+  }
+
+  function pause() {
+    active = false;
+  };
+
+  function resume() {
+    active = true;
+  };
+
+  function createCurrentImage(i) {
+    if (!i) i = current;
+    if (!canvas) canvas = document.createElement("canvas");
+    if (!context) context = canvas.getContext('2d');
+    canvas.width = width;
+    canvas.height = height;
+    if (vertical) {
+      context.drawImage(image, -offsetx -(originx), -offsety - originy - (height * i), image.naturalWidth, image.naturalHeight);
+    } else {
+      context.drawImage(image, -offsetx - originx - (width * i), -offsety -(originy), image.naturalWidth, image.naturalHeight);
+    }
+    return canvas;
+  }
+
+  return {
+    play : play,
+    next: next,
+    pause: pause,
+    resume: resume,
+    getStatic: static
+  }
+};

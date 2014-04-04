@@ -58,13 +58,6 @@ String.prototype.createImage = function(callback, cross) {
   return img;
 };
 
-/* Create sound from string path */
-String.prototype.createSound = function(callback) {
-  var audio = new Audio(this);
-  if (callback) audio.addEventListener('canplaythrough', callback, false);
-  return audio;
-};
-
 /* Go to url, default is new tab/window */
 String.prototype.goTo = function(tab) {
   if (tab === false) {
@@ -186,7 +179,7 @@ Math.lineDistance = function(x1, y1, x2, y2) {
 
 /* Has box collision occured */
 Math.collides = function(a, b) {
-  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+  return ((a.x == b.x) || (a.x <= b.x + b.width && a.x + a.width > b.x)) && ((a.y == b.y) || (a.y <= b.y + b.height && a.y + a.height > b.y));
 };
 
 /* Return x,y points on a three point curve */
