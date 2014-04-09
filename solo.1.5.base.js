@@ -8,38 +8,10 @@
 if (!window.requestAnimationFrame) { window.requestAnimationFrame = (function() { return window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
   function( /* function FrameRequestCallback */ callback, /* DOMElement Element */ element ) { window.setTimeout( callback, 1000 / 60 ); }; })(); }
 
-/* Object's extended with Underscore instead of .prototype so we don't upset anyone */
-if (typeof(_) === "object") {
-  _.mixin({
-    /* Cleanup an array of objects with .destroy active */
-    cleanupArray : function(array) {
-      if (!_.isArray(array)) return;
-      var deleting = [];
-      for (var i = 0; i < this.length; i++) {
-        if (array[i].destroy === true)
-          deleting.push(i - deleting.length);
-      }
-      for (var i = 0; i < deleting.length; i++) {
-        array.splice(deleting[i], 1);
-      }
-    },
-
-    /* Shuffle array */
-    shuffleArray : function(array) {
-      if (!_.isArray(array)) return;
-      var i = array.length, j, tempi, tempj;
-      if (i === 0) return array;
-      while (--i) {
-        j = Math.floor(Math.random() * ( i + 1 ));
-        tempi = array[i];
-        tempj = array[j];
-        array[i] = tempj;
-        array[j] = tempi;
-      }
-      return array;
-    }
-  });
-}
+// system.js - http://github.com/mrdoob/system.js
+var System={browser:function(){var a=navigator.userAgent;return/Arora/i.test(a)?"Arora":/Chrome/i.test(a)?"Chrome":/Epiphany/i.test(a)?"Epiphany":/Firefox/i.test(a)?"Firefox":/Mobile(\/.*)? Safari/i.test(a)?"Mobile Safari":/MSIE/i.test(a)?"Internet Explorer":/Midori/i.test(a)?"Midori":/Opera/.test(a)?"Opera":/Safari/i.test(a)?"Safari":!1}(),os:function(){var a=navigator.userAgent;return/Android/i.test(a)?"Android":/CrOS/i.test(a)?"Chrome OS":/iP[ao]d|iPhone/i.test(a)?"iOS":/Linux/i.test(a)?
+"Linux":/Mac OS/i.test(a)?"Mac OS":/windows/i.test(a)?"Windows":!1}(),support:{canvas:!!window.CanvasRenderingContext2D,localStorage:function(){try{return!!window.localStorage.getItem}catch(a){return!1}}(),file:!!window.File&&!!window.FileReader&&!!window.FileList&&!!window.Blob,fileSystem:!!window.requestFileSystem||!!window.webkitRequestFileSystem,getUserMedia:!!window.navigator.getUserMedia||!!window.navigator.webkitGetUserMedia||!!window.navigator.mozGetUserMedia||!!window.navigator.msGetUserMedia,
+requestAnimationFrame:!!window.mozRequestAnimationFrame||!!window.webkitRequestAnimationFrame||!!window.oRequestAnimationFrame||!!window.msRequestAnimationFrame,sessionStorage:function(){try{return!!window.sessionStorage.getItem}catch(a){return!1}}(),webgl:function(){try{return!!window.WebGLRenderingContext&&!!document.createElement("canvas").getContext("experimental-webgl")}catch(a){return!1}}(),worker:!!window.Worker}};
 
 /* Get elements */
 String.prototype.get = function() {
@@ -104,47 +76,6 @@ String.prototype.queryString = function() {
   return match && decodeURIComponent(match[1].replace(/\+/g, " "));
 };
 
-/* Windows or mac */
-String.prototype.isPlatform = function() {
-  switch (this.toLowerCase()) {
-    case 'blending':
-      var ctx = document.createElement('canvas').getContext('2d');
-      ctx.globalCompositeOperation = 'color';
-      if (ctx.globalCompositeOperation == 'color' && !"safari".isBrowser())
-        return true;
-      return false;
-    case 'blends':
-      /* TODO: Only return available, and do indexof(this) */
-      return ["normal","multiply","screen","overlay","darken","lighten","color-dodge","color-burn","hard-light",
-        "soft-light","difference","exclusion","hue","saturation","color","luminosity"];
-    case 'touch':
-      return 'ontouchstart' in window || 'onmsgesturechange' in window;
-    case 'windows':
-      if (navigator.platform.indexOf("win") > -1) return true; return false;
-    case 'osx':
-    case 'mac':
-      if (navigator.platform.indexOf("mac") > -1) return true; return false;
-  }
-};
-
-/* Browser detection */
-String.prototype.isBrowser = function() {
-  switch (this.toLowerCase()) {
-    case 'opera':
-      return !!window.opera || navigator.userAgent.indexOf('Opera') >= 0;
-    case 'ie':
-      return /*@cc_on!@*/false;
-    case 'ie9':
-      return navigator.appName === 'Microsoft Internet Explorer';
-    case 'firefox':
-      return typeof InstallTrigger !== 'undefined';
-    case 'safari':
-      return Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0;
-    case 'chrome':
-      return !!window.chrome;
-  }
-};
-
 /* Log by key */
 String.prototype.lastmessage = "";
 String.prototype.log = function(e) {
@@ -164,8 +95,17 @@ Math.calcAngle = function(x1, y1, x2, y2) {
   return Math.toRadians(Math.atan2(y2 - y1, x2 - x1));
 };
 
-/* To Radians */
+/* Creating bounding box */
+Math.createBounds = function(obj) {
+  return {
+    x: obj.x, y: obj.y,
+    width: obj.width, height: obj.height,
+    left: obj.x, right: obj.x + obj.width,
+    top: obj.y, bottom: obj.y + obj.height
+  }
+}
 
+/* To Radians */
 Math.toRadians = function(num) {
   return num * (180 / Math.PI);
 }
@@ -179,11 +119,12 @@ Math.lineDistance = function(x1, y1, x2, y2) {
 
 /* Has box collision occured */
 Math.collides = function(a, b) {
-  return ((a.x == b.x) || (a.x <= b.x + b.width && a.x + a.width > b.x)) && ((a.y == b.y) || (a.y <= b.y + b.height && a.y + a.height > b.y));
+  a = Math.createBounds(a); b = Math.createBounds(b);
+  return ((a.left == b.left) || (a.left <= b.right && a.right > b.left)) && ((a.top == b.top) || (a.top <= b.bottom && a.bottom > b.top));
 };
 
 /* Return x,y points on a three point curve */
-Math.getCurvePoints = function(x1, y1, x2, y2, x3, y3, dir) {
+Math.getCurvePoints = function(x1, y1, x2, y2, x3, y3) {
   var a = ((y2-y1)*(x1-x3) + (y3-y1)*(x2-x1))/((x1-x3)*(x2*x2-x1*x1) + (x2-x1)*(x3*x3-x1*x1));
   var b = ((y2 - y1) - a*(x2*x2 - x1*x1)) / (x2-x1);
   var c = y1 - a*x1*x1 - b*x1;

@@ -119,6 +119,7 @@ function SoloAudio(urls) {
   var nodes = {};
   var sources = {};
   var players = {};
+  var ismute = false;
 
   function init(urls) {
     if (!urls) return;
@@ -133,6 +134,18 @@ function SoloAudio(urls) {
 
   function finishedLoading(list) {
     bufferList = list;
+    "solo.audio.loaded".fireEvent();
+  }
+
+  function mute() {
+    for (n in nodes) {
+      if (!ismute) {
+        nodes[n].gain.value = 0;
+      } else {
+        nodes[n].gain.value = nodes[n].gain.lastvalue;
+      }
+    }
+    ismute = !ismute;
   }
 
   function play(index, volume, loop) {
@@ -147,7 +160,12 @@ function SoloAudio(urls) {
       sources[index].loop = loop || false;
       if (isNaN(volume))
         volume = 1;
-      nodes[index].gain.value = volume;
+      if (ismute) {
+        nodes[index].gain.value = 0;
+      } else {
+        nodes[index].gain.value = volume;
+      }
+      nodes[index].gain.lastvalue = volume;
       if (sources[index].playbackState == 0)
         sources[index].start(0);
       return;
@@ -177,6 +195,7 @@ function SoloAudio(urls) {
   }
 
   return {
-    play: play
+    play: play,
+    mute: mute
   }
 }

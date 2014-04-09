@@ -8,7 +8,7 @@ function SoloCharacterControl(context, options) {
   var lastx, lasty;
   var width = 48, height = 48;
   var origx, origy;
-  var dx = 1, dy = 1;
+  var dx = 4, dy = 4;
   var velocityy;
   var steps = 0;
   var jumping = false, falling = false;
@@ -73,6 +73,7 @@ function SoloCharacterControl(context, options) {
     origx = x;
     origy = y;
 
+    destroy = false;
     active = true;
   }
   init(context, options);
@@ -92,7 +93,8 @@ function SoloCharacterControl(context, options) {
     }
   }
 
-  function reset() {
+  function reset(_level) {
+    if (_level) level = _level;
     init(gscreen, o_options);
   }
 
@@ -322,11 +324,14 @@ function SoloCharacterControl(context, options) {
     var currimg;
     if (animations["idle"])
       currimg = animations["idle"].play();
-    if (updated && animations["walk_" + direction])
+    if (updated && animations["walk_" + direction]) {
       currimg = animations["walk_" + direction].play();
+      animations["dead_" + direction].play(); //Sync
+    }
     if (updated && direction == "" && previousdirection != "" && animations["walk_" + previousdirection])
       currimg = animations["walk_" + previousdirection].getStatic();
-
+    if (destroy && animations["dead_" + direction])
+      currimg = animations["dead_" + direction].play();
     if (currimg) {
       if (pacman) {
         gscreen.drawImage(currimg, x - (width * 0.25), y - (height * 0.25), width * 1.75 , height * 1.75);
