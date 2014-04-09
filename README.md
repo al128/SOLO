@@ -1,6 +1,6 @@
 SOLO.JS : JS/HTML5/Canvas Utility drop-in file
 Created by Alastair Pearce
-alastair.pearce@therook.co.uk
+acpearce.dev@gmail.com
 
 What is SOLO?
 ---
