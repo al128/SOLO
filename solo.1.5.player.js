@@ -322,16 +322,18 @@ function SoloCharacterControl(context, options) {
 
   function draw() {
     var currimg;
-    if (animations["idle"])
-      currimg = animations["idle"].play();
-    if (updated && animations["walk_" + direction]) {
+
+    if (destroy && animations["dead_" + direction]) {
+      currimg = animations["dead_" + direction].play();
+    } else if (updated && direction == "" && previousdirection != "" && animations["walk_" + previousdirection]) {
+      currimg = animations["walk_" + previousdirection].getStatic();
+    } else if (updated && animations["walk_" + direction]) {
       currimg = animations["walk_" + direction].play();
       animations["dead_" + direction].play(); //Sync
+    } else if (animations["idle"]) {
+      currimg = animations["idle"].play();
     }
-    if (updated && direction == "" && previousdirection != "" && animations["walk_" + previousdirection])
-      currimg = animations["walk_" + previousdirection].getStatic();
-    if (destroy && animations["dead_" + direction])
-      currimg = animations["dead_" + direction].play();
+
     if (currimg) {
       if (pacman) {
         gscreen.drawImage(currimg, x - (width * 0.25), y - (height * 0.25), width * 1.75 , height * 1.75);
@@ -383,124 +385,120 @@ function SoloCharacterControl(context, options) {
 }
 
 function SoloAnimation(animation_settings) {
-  var active = false; //Running on update
-  var start; //Start time in ms
-  var current = 0; //Current slide index
-  var interval = 500; //Time between slides in ms
-  var repeat = true; //Recycle animation
-  var slides = 0; //Number of slides
-  var width = 0, height = 0; //Width/height of each slide in pixels
-  var image; //Contains our sprites
-  var originx = 0;
-  var originy = 0;
-  var offsetx = 0, offsety;
-  var pingpong = false;
-  var direction = "right";
-  var static_index = 0;
-  var vertical = false;
+  this.init(animation_settings);
+};
+var _SoSAnim = SoloAnimation.prototype;
 
-  var context;
-  var canvas;
+  _SoSAnim.active = false; //Running on update
+  _SoSAnim.start; //Start time in ms
+  _SoSAnim.current = 0; //Current slide index
+  _SoSAnim.interval = 500; //Time between slides in ms
+  _SoSAnim.repeat = true; //Recycle animation
+  _SoSAnim.slides = 0; //Number of slides
+  _SoSAnim.width = 0, height = 0; //Width/height of each slide in pixels
+  _SoSAnim.image; //Contains our sprites
+  _SoSAnim.originx = 0;
+  _SoSAnim.originy = 0;
+  _SoSAnim.offsetx = 0, _SoSAnim.offsety = 0;
+  _SoSAnim.pingpong = false;
+  _SoSAnim.direction = "right";
+  _SoSAnim.static_index = 0;
+  _SoSAnim.vertical = false;
 
-  function init(s) {
-    start = getCurrentTime();
+  _SoSAnim.canvas;
+  _SoSAnim.context;
 
-    if (s.image) image = s.image;
-    if (s.width) width = parseInt(s.width);
-    if (s.height) height = parseInt(s.height);
-    if (s.slides) slides = parseInt(s.slides);
-    if (s.interval) interval = parseInt(s.interval);
-    if (s.repeat) repeat = s.repeat;
-    if (s.originx) originx = s.originx;
-    if (s.originy) originy = s.originy;
-    if (s.pingpong) pingpong = true;
-    if (s.vertical) {
-      vertical = true;
-    }
-    if (s.static) static_index = s.static;
-    if (s.offsetx) offsetx = s.offsetx;
-    if (s.offsety) offsety = s.offsety;
+  _SoSAnim.init = function(s) {
+    this.start = this.getCurrentTime();
 
-    if (width === 0) width = Math.floor(image.naturalWidth / s.slides);
-    if (height === 0) height = width;
+    if (s.image) this.image = s.image;
+    if (s.width) this.width = parseInt(s.width);
+    if (s.height) this.height = parseInt(s.height);
+    if (s.slides) this.slides = parseInt(s.slides);
+    if (s.interval) this.interval = parseInt(s.interval);
+    if (s.repeat) this.repeat = s.repeat;
+    if (s.originx) this.originx = s.originx;
+    if (s.originy) this.originy = s.originy;
+    if (s.pingpong) this.pingpong = true;
+    if (s.vertical) this.vertical = true;
+    if (s.static) this.static_index = s.static;
+    if (s.offsetx) this.offsetx = s.offsetx;
+    if (s.offsety) this.offsety = s.offsety;
 
-    resume();
-  }
-  init(animation_settings);
+    if (this.width === 0) this.width = Math.floor(this.image.naturalWidth / this.slides);
+    if (this.height === 0) this.height = this.width;
 
-  function static() {
-    return createCurrentImage(static_index);
-  }
+    this.canvas = document.createElement("canvas");
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+    this.context = this.canvas.getContext('2d');
 
-  function play() {
-    if (!active) return current_image;
-    return update();
+    this.resume();
   };
 
-  function update() {
-    if (getCurrentTime() - start > interval)
-      return next();
-    if (canvas)
-      return canvas;
-    return createCurrentImage();
+  _SoSAnim.getStatic = function() {
+    return this.createCurrentImage(this.static_index);
   };
 
-  function next() {
-    start = getCurrentTime();
+  _SoSAnim.play = function() {
+    if (!this.active) return this.canvas;
+    return this.update();
+  };
 
-    if (direction == "right")
-      current++;
-    if (direction == "left")
-      current--;
+  _SoSAnim.update = function() {
+    if (this.getCurrentTime() - this.start > this.interval)
+      return this.next();
+    if (this.canvas)
+      return this.canvas;
+  };
 
-    if (current < 0) {
-      current ++;
-      direction = "right";
+  _SoSAnim.next = function() {
+    this.start = this.getCurrentTime();
+
+    if (this.direction == "right")
+      this.current++;
+    if (this.direction == "left")
+      this.current--;
+
+    if (this.current < 0) {
+      this.current ++;
+      this.direction = "right";
     }
 
-    if (current >= slides) {
-      if (pingpong) {
-        current -= 2;
-        direction = "left";
-      } else if (repeat) {
-        current = 0;
+    if (this.current >= this.slides) {
+      if (this.pingpong) {
+        this.current -= 2;
+        this.direction = "left";
+      } else if (this.repeat) {
+        this.current = 0;
       }
     }
 
-    return createCurrentImage();
+    return this.createCurrentImage();
   };
 
-  function getCurrentTime() {
-    return new Date().getTime();
-  }
-
-  function pause() {
-    active = false;
+  _SoSAnim.getCurrentTime = function() {
+    return Date.now();
   };
 
-  function resume() {
-    active = true;
+  _SoSAnim.pause = function() {
+    this.active = false;
   };
 
-  function createCurrentImage(i) {
-    if (!i) i = current;
-    if (!canvas) canvas = document.createElement("canvas");
-    if (!context) context = canvas.getContext('2d');
-    canvas.width = width;
-    canvas.height = height;
-    if (vertical) {
-      context.drawImage(image, -offsetx -(originx), -offsety - originy - (height * i), image.naturalWidth, image.naturalHeight);
+  _SoSAnim.resume = function() {
+    this.active = true;
+  };
+
+  _SoSAnim.createCurrentImage = function(i) {
+    if (!i) i = this.current;
+
+    this.context.clear();
+
+    if (this.vertical) {
+      this.context.drawImage(this.image, -this.offsetx -(this.originx), -this.offsety - this.originy - (this.height * i), this.image.naturalWidth, this.image.naturalHeight);
     } else {
-      context.drawImage(image, -offsetx - originx - (width * i), -offsety -(originy), image.naturalWidth, image.naturalHeight);
+      this.context.drawImage(this.image, -this.offsetx - this.originx - (this.width * i), -this.offsety -(this.originy), this.image.naturalWidth, this.image.naturalHeight);
     }
-    return canvas;
-  }
 
-  return {
-    play : play,
-    next: next,
-    pause: pause,
-    resume: resume,
-    getStatic: static
-  }
-};
+    return this.canvas;
+  };

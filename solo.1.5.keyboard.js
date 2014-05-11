@@ -1,5 +1,19 @@
 /* Setup keyboard */
 function SoloKeyboard() {
+  if (System.os.toLowerCase() == "android" || System.os.toLowerCase() == "ios") {
+    return {getKeys: function(){ return {
+      "left": 0,"right": 0,"down": 0,"up": 0,"space": 0,"action1": 0,"action2": 0
+    }}};
+  }
+
+  if (typeof(jQuery) !== "undefined") {
+    if (jQuery(document).data("solokeyboard")) {
+      return jQuery(document).data("solokeyboard");
+    } else {
+      jQuery(document).data("solokeyboard", {getKeys : getKeyboard});
+    }
+  }
+
   var left = 0;
   var right = 0;
   var down = 0;

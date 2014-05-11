@@ -13,10 +13,17 @@ var System={browser:function(){var a=navigator.userAgent;return/Arora/i.test(a)?
 "Linux":/Mac OS/i.test(a)?"Mac OS":/windows/i.test(a)?"Windows":!1}(),support:{canvas:!!window.CanvasRenderingContext2D,localStorage:function(){try{return!!window.localStorage.getItem}catch(a){return!1}}(),file:!!window.File&&!!window.FileReader&&!!window.FileList&&!!window.Blob,fileSystem:!!window.requestFileSystem||!!window.webkitRequestFileSystem,getUserMedia:!!window.navigator.getUserMedia||!!window.navigator.webkitGetUserMedia||!!window.navigator.mozGetUserMedia||!!window.navigator.msGetUserMedia,
 requestAnimationFrame:!!window.mozRequestAnimationFrame||!!window.webkitRequestAnimationFrame||!!window.oRequestAnimationFrame||!!window.msRequestAnimationFrame,sessionStorage:function(){try{return!!window.sessionStorage.getItem}catch(a){return!1}}(),webgl:function(){try{return!!window.WebGLRenderingContext&&!!document.createElement("canvas").getContext("experimental-webgl")}catch(a){return!1}}(),worker:!!window.Worker}};
 
+/* Polyfill date */
+if (!Date.now) {
+  Date.now = function now() {
+    return new Date().getTime();
+  };
+}
+
 /* Get elements */
 String.prototype.get = function() {
-  if (typeof(jQuery) == "undefined")
-    return jQuery(this);
+  if (typeof(jQuery) !== "undefined")
+    return jQuery(this.toString());
   return document.querySelectorAll(this);
 }
 
@@ -52,6 +59,10 @@ String.prototype.monitor = function() {
 
 /* Fire event */
 String.prototype.fireEvent = function(e) {
+  if (typeof(jQuery) !== "undefined") {
+    jQuery("body").trigger(this.toString());
+    return;
+  }
   if (window.CustomEvent) {
     var event = new CustomEvent(this, {detail: arguments});
   } else {
@@ -64,6 +75,12 @@ String.prototype.fireEvent = function(e) {
 /* Register event */
 String.prototype.registerEvent = function(callback) {
   var a = arguments;
+  if (typeof(jQuery) !== "undefined") {
+    jQuery("body").on(this.toString(), function(e, a) {
+      callback(e, a);
+    });
+    return;
+  }
   "body".get()[0].addMultiListener(this, function(e, a) {
     callback(e, a);
   });

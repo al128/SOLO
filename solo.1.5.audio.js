@@ -2,9 +2,9 @@
 (function () {
   'use strict';
 
-  var
-  AudioContext = window.AudioContext = window.AudioContext || window.webkitAudioContext,
-  AudioContextPrototype = AudioContext.prototype;
+  var AudioContext = window.AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  var AudioContextPrototype = AudioContext.prototype;
 
   Object.defineProperties(AudioContextPrototype, {
     createGain: {
@@ -18,8 +18,7 @@
     }
   });
 
-  var
-  audioContext = new AudioContext(),
+  var audioContext = new AudioContext(),
   oscillatorPrototype = audioContext.createOscillator().constructor.prototype,
   bufferSourcePrototype = audioContext.createBufferSource().constructor.prototype,
   gainGainConstructorPrototype = audioContext.createGain().gain.constructor.prototype;
@@ -109,10 +108,22 @@ BufferLoader.prototype.load = function() {
   this.loadBuffer(this.urlList[i], i);
 }
 
-
 /* Sound class */
 function SoloAudio(urls) {
   //http://www.html5rocks.com/en/tutorials/webaudio/intro/
+
+  if (!AudioContext || System.os.toLowerCase() == "android") {
+    setTimeout(function() {
+      "solo.audio.loaded".fireEvent();
+    }, 2000);
+    return {
+      "play": function(){},
+      mute: function(){},
+      "target": function(){},
+      clear: function(){}
+    }
+  }
+
   var bufferLoader;
   var bufferList = [];
   var ac = new AudioContext();
@@ -134,6 +145,9 @@ function SoloAudio(urls) {
 
   function finishedLoading(list) {
     bufferList = list;
+    for (var i = 0; i < bufferList.length; i++) {
+      createSource(i, 0, true);
+    }
     "solo.audio.loaded".fireEvent();
   }
 
@@ -148,14 +162,22 @@ function SoloAudio(urls) {
     ismute = !ismute;
   }
 
-  function play(index, volume, loop) {
-    if (!bufferList[index]) {
-      clearTimeout(players[index]);
-      players[index] = setTimeout(function(){
-        play(index, volume, loop);
-      }, 50);
-      return;
+  function target(index, val) {
+    if (typeof(nodes[index]) != "undefined")
+      nodes[index].gain.targetvalue = val;
+  }
+
+  function clear() {
+    for (n in sources) {
+      sources[n].noteOff(0)
     }
+    nodes = null;
+    sources = null;
+    players = null;
+    ac = null;
+  }
+
+  function play(index, volume, loop) {
     if (sources[index]) {
       sources[index].loop = loop || false;
       if (isNaN(volume))
@@ -166,12 +188,33 @@ function SoloAudio(urls) {
         nodes[index].gain.value = volume;
       }
       nodes[index].gain.lastvalue = volume;
-      if (sources[index].playbackState == 0)
+      nodes[index].gain.targetvalue = volume;
+      nodes[index].gain.customtimer = volume;
+      nodes[index].gain.customupdate = function() {
+        var that = this;
+        clearTimeout(that.customtimer);
+        that.value = Math.round(that.value * 10) / 10;
+        that.lastvalue = that.value;
+        if (that.targetvalue > that.lastvalue) {
+          that.lastvalue += 0.1;
+        } else if (that.targetvalue < that.lastvalue) {
+          that.lastvalue -= 0.1;
+        }
+        that.lastvalue = Math.min(that.lastvalue, 1);
+        that.lastvalue = Math.max(that.lastvalue, 0);
+        if (!ismute) {
+          that.value = that.lastvalue;
+        }
+        that.customtimer = setTimeout(function(){
+          that.customupdate();
+        }, 50);
+      }
+      nodes[index].gain.customupdate();
+      if (sources[index].hasstarted == false) {
         sources[index].start(0);
-      return;
+        sources[index].hasstarted = true;
+      }
     }
-    createSource(index, volume, loop);
-    play(index, volume, loop);
   }
 
   function createSource(index, volume, loop) {
@@ -185,6 +228,8 @@ function SoloAudio(urls) {
     var source = ac.createBufferSource();
     source.buffer = bufferList[index];
 
+    source.hasstarted = false;
+
     // Connect source to a gain node
     source.connect(gainNode);
 
@@ -196,6 +241,8 @@ function SoloAudio(urls) {
 
   return {
     play: play,
-    mute: mute
+    mute: mute,
+    target: target,
+    clear: clear
   }
 }

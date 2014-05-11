@@ -1,5 +1,13 @@
 /* Setup mouse and touch */
 function SoloMouse(element) {
+  if (typeof(jQuery) !== "undefined") {
+    if (jQuery(element).data("solomouse")) {
+      return jQuery(element).data("solomouse");
+    } else {
+      jQuery(element).data("solomouse", {getMouse:getMouse});
+    }
+  }
+
   var start;
   var el = element;
   var mx, my;
@@ -14,7 +22,7 @@ function SoloMouse(element) {
   var speed = 0;
   var heldtime = 0;
   var lastheldtime = 0;
-  var threshold = 0.9;
+  var threshold = 1;
   var direction = "";
 
   function getMousePosition(e, finger) {
