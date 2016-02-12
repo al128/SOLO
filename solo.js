@@ -1,12 +1,12 @@
 if (!window.requestAnimationFrame) { window.requestAnimationFrame = (function() { return window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
   function(callback, element ) { window.setTimeout( callback, 1000 / 60 ); }; })(); }
 
-(function(_scope, _multi, _getScreen) {
-  _scope = function(query) {
-    return document.querySelector(query);
-  };
+(function(_scope, _single, _multi, _getScreen) {
 
-  var _$ = _scope;
+  var solo = function(query) {
+    return document.querySelector(query);
+  }
+  var _$ = solo;
 
   _$.forEach = function(arr, forEach) {
     if (arr.length > 0 && forEach) {
@@ -16,14 +16,39 @@ if (!window.requestAnimationFrame) { window.requestAnimationFrame = (function() 
     }
   }
 
-  _multi = function(query, forEach) {
+  var multi = function(query, forEach) {
     var elArr = query || [];
     if (typeof(query) == "string") elArr = document.querySelectorAll(query);
     _$.forEach(elArr, forEach);
     return elArr;
   }
+  _$.find = multi;
 
-  _$.find = _multi;
+  var getScreen = function(query) {
+    var canvas = _$(query);
+    if (canvas && canvas.getContext) {
+      var context = canvas.getContext("2d");
+      return {
+        canvas: canvas,
+        context: context
+      }
+    } else {
+      _$.log("No canvas found", canvas);
+    }
+  }
+  _$.getScreen = getScreen;
+
+  // -- Bind the above to scope properties
+  var scopeId = 0;
+  if (_scope.hasOwnProperty(_single[0])) {
+    scopeId = 1;
+  }
+
+  _scope[_single[scopeId]] = solo;
+  _scope[_multi[scopeId]] = multi;
+  _scope[_getScreen[scopeId]] = getScreen;
+
+  // -- Down to business
 
   _$.on = function(el, eventArray, callback) {
     for (var i = 0; i < eventArray.length; i++) {
@@ -33,19 +58,13 @@ if (!window.requestAnimationFrame) { window.requestAnimationFrame = (function() 
 
   _$.log = function(message, e) {
     if (this.lastLog == message) return;
-    console.log(message, e);
+    if (e) {
+      console.log(message, e);
+    } else {
+      console.log(message);
+    }
     this.lastLog = message;
   }
-
-  _$.getScreen = function(query) {
-    var canvas = _$(query);
-    var context = canvas.getContext("2d");
-    return {
-      canvas: canvas,
-      context: context
-    }
-  }
-  _getScreen = _$.getScreen;
 
   _$.cache = {};
   _$.cache.img = {};
@@ -178,7 +197,8 @@ if (!window.requestAnimationFrame) { window.requestAnimationFrame = (function() 
       _$.update();
     });
   }
-})( window.$ ? window._ || window.$,
-    window.$ ? window.__ || window.$$,
-    window._$ );
-// -- Need to change the global variable name? Tweak the above line
+})(  window,
+    ['$', '_'],
+    ['$$', '__'],
+    ['_$', '___'] );
+// -- Need to change the global variable name? Tweak the above arrays [preferred, backup]
