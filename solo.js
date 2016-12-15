@@ -32,6 +32,7 @@
   }
 
   _scope[_solo] = $;
+  window.___$solo = $;
 
   options = options || {};
 
@@ -49,26 +50,26 @@
     return this;
   }
 
-  $._.toScreen = function() {
-    var canvas = this;
-    if (canvas && canvas.getContext) {
-      var context = canvas.getContext("2d");
-      return {
-        canvas: canvas,
-        context: context
-      }
-    } else {
-      $.log("No canvas found", canvas);
+  $._.getBounds = function() {
+    var bounds = this.getBounds.bounds;
+
+    if (($.time !== this.getBounds.accessed && ($._scrolled || $._resized)) || !bounds) {
+      bounds = this.getBoundingClientRect();
     }
+
+    this.getBounds.bounds = bounds;
+    this.getBounds.accessed = $.time;
+
+    return bounds;
   }
 
   $._.getTop = function() {
-    return this.getBoundingClientRect().top + $.scrollY;
+    return this.getBounds().top + $.scrollY;
   }
 
   $._.isVisible = function() {
     var top = this.getTop();
-    var height = this.offsetHeight;
+    var height = this.getBounds().height;
     var bottom = top + height;
     return $.scrollY + $.screenHeight >= top && $.scrollY < bottom;
   }
@@ -95,10 +96,8 @@
 
   $._extendSingleNode = function(el) {
     if (el) {
-      if (el.nodeName && el.nodeName.toLowerCase() === "canvas") {
-        if (!el.hasOwnProperty("toScreen")) {
-          el.toScreen = $._.toScreen;
-        }
+      if (!el.hasOwnProperty("getBounds")) {
+        el.getBounds = $._.getBounds;
       }
 
       if (!el.hasOwnProperty("getTop")) {
@@ -152,22 +151,28 @@
   }
 
   $.log = function(message, e) {
+    var showTimestamp = true;
+
+    if ($.cache.log.length > 0) {
+      if ($.time < $.cache.log[$.cache.log.length - 1].datetime + 2000) {
+        showTimestamp = false;
+      }
+    }
+
+    if (showTimestamp) {
+      console.info($.time + ":");
+    }
+
     $.cache.log.push({
       message: message,
       e: e,
       datetime: $.time
     });
 
-    if (typeof(message) == "string") {
-      // if ($.cache.log.indexOf(message) > -1) {
-      //   return;
-      // }
-    }
-
     if (e) {
-      console.log($.time, message, e);
+      console.log(message, e);
     } else {
-      console.log($.time, message);
+      console.log(message);
     }
   }
 
@@ -206,7 +211,7 @@
   $._resized = false;
 
   $._updateScrollY = function() {
-    return window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+    return window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
   }
 
   // -- Updating
@@ -235,7 +240,8 @@
     updateObject.time = 0;
     updateObject.events = {
       resized: true,
-      scrolled: true
+      scrolled: true,
+      visible: false
     };
 
     updateObject.update = function() {
@@ -247,20 +253,29 @@
         this.events.resized = true;
       }
 
-      var metRequirements = true;
+      if (updateData.preUpdate) {
+        updateData.preUpdate();
+      }
+
+      var validUpdate = true;
       if (updateData.requirements) {
+        if (updateData.requirements.visible) {
+          if (!updateData.requirements.visible.isVisible()) {
+            validUpdate = false;
+          }
+        }
         if (updateData.requirements.scrolled && !this.events.scrolled) {
-          metRequirements = false;
+          validUpdate = false;
         }
 
         if (updateData.requirements.resized && !this.events.resized) {
-          metRequirements = false;
+          validUpdate = false;
         }
       }
 
       if (this.remaining !== 0 &&
       $.time >= this.time + this.interval &&
-      metRequirements) {
+      validUpdate) {
         if (updateData.update) {
           var output = updateData.update();
           if (typeof(output) === "boolean") {
@@ -320,7 +335,7 @@
 
     var now = Date.now();
     $.time = now;
-    $.passed = now - $._prevTime;
+    $._passed = now - $._prevTime;
 
     // Dimensions
 
@@ -331,7 +346,7 @@
     // Scroll
 
     var scrollY = $._updateScrollY();
-    $.scrolled = scrollY !== $.scrollY;
+    $._scrolled = $._resized || scrollY !== $.scrollY;
     $.scrollY = scrollY;
 
     // Updates
@@ -339,17 +354,17 @@
     $._interval = ((1 / $.fps) * 1000);
 
     if (redraw !== true) {
-      $._accumulator += $.passed;
+      $._accumulator += $._passed;
       while ($._accumulator >= $._interval) {
         $._updates.forEach(function(updateObject) {
-          updateObject.update();
+          updateObject.update($._interval);
         });
 
         $._accumulator -= $._interval;
       }
     } else {
       $._updates.forEach(function(updateObject) {
-        updateObject.update();
+        updateObject.update($._passed);
       });
     }
 
@@ -357,7 +372,7 @@
       if (redraw) {
         updateObject.dirty = true;
       }
-      updateObject.draw();
+      updateObject.draw($._passed);
     });
 
     // Clean up
@@ -365,6 +380,8 @@
     $._prevTime = now;
   }
 
-  $._update();
+  window.addEventListener("load", function() {
+    $._update();
+  });
 
 })( window, (!window.hasOwnProperty('$') ? '$' : '_$'), {} );
