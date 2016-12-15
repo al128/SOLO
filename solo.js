@@ -15,14 +15,19 @@
     // Pass in an array to look for multiple elements
     // Pass in a string to get the first element
 
-    if (typeof(query) == "object") {
-      var elArr = document.querySelectorAll(query);
-      $._extendMultiNode(elArr);
-      return elArr;
-    } else if (typeof(query) == "string") {
+    if (typeof(query) === "string") {
       var el = document.querySelector(query);
       $._extendSingleNode(el);
       return el;
+    } else if (typeof(query) === "object") {
+      if (query.nodeName) {
+        $._extendSingleNode(el);
+        return el;
+      } else if (query.length && typeof(query[0]) === "string") {
+        var elArr = document.querySelectorAll(query);
+        $._extendMultiNode(elArr);
+        return elArr;
+      }
     }
   }
 
@@ -35,7 +40,7 @@
   $._ = {};
 
   $._.forEach = function(eachFunc) {
-    if (this.length > 0 && typeof(eachFunc) == "function") {
+    if (this.length > 0 && typeof(eachFunc) === "function") {
       for (var i = 0; i < arr.length; i++) {
         eachFunc(arr[i], i, arr);
       }
@@ -104,12 +109,12 @@
         el.isVisible = $._.isVisible;
       }
 
-      if (!elArr.hasOwnProperty("on")) {
-        elArr.on = $.__.on;
+      if (!el.hasOwnProperty("on")) {
+        el.on = $._.on;
       }
 
-      if (!elArr.hasOwnProperty("off")) {
-        elArr.off = $.__.off;
+      if (!el.hasOwnProperty("off")) {
+        el.off = $._.off;
       }
     }
   }
@@ -117,15 +122,15 @@
   $._extendMultiNode = function(elArr) {
     if (elArr) {
       if (!elArr.hasOwnProperty("forEach")) {
-        elArr.forEach = $.__.forEach;
+        elArr.forEach = $._.forEach;
       }
 
       if (!elArr.hasOwnProperty("on")) {
-        elArr.on = $.__.on;
+        elArr.on = $._.on;
       }
 
       if (!elArr.hasOwnProperty("off")) {
-        elArr.off = $.__.off;
+        elArr.off = $._.off;
       }
 
       elArr.forEach(function(node) {
@@ -136,7 +141,7 @@
 
   // -- Cache
 
-  $.cache = { id: 0, images: {}, log: [] };
+  $.cache = { id: 0, img: {}, log: [] };
 
   // -- Debugging
 
@@ -298,14 +303,18 @@
     return updateID;
   }
 
-  $.update = function() {
+  $.redraw = function() {
+    $._theUpdate(true);
+  }
+
+  $._update = function() {
     requestAnimationFrame(function() {
       $._theUpdate();
-      $.update();
+      $._update();
     });
   }
 
-  $._theUpdate = function() {
+  $._theUpdate = function(redraw) {
 
     // Time
 
@@ -328,17 +337,26 @@
     // Updates
 
     $._interval = ((1 / $.fps) * 1000);
-    $._accumulator += $.passed;
 
-    while ($._accumulator >= $._interval) {
+    if (redraw !== true) {
+      $._accumulator += $.passed;
+      while ($._accumulator >= $._interval) {
+        $._updates.forEach(function(updateObject) {
+          updateObject.update();
+        });
+
+        $._accumulator -= $._interval;
+      }
+    } else {
       $._updates.forEach(function(updateObject) {
         updateObject.update();
       });
-
-      $._accumulator -= $._interval;
     }
 
     $._updates.forEach(function(updateObject) {
+      if (redraw) {
+        updateObject.dirty = true;
+      }
       updateObject.draw();
     });
 
@@ -347,6 +365,6 @@
     $._prevTime = now;
   }
 
-  $.update();
+  $._update();
 
 })( window, (!window.hasOwnProperty('$') ? '$' : '_$'), {} );
